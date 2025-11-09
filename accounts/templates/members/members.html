@@ -12,15 +12,23 @@
             <div class="card-header">
                 <h6 class="card-title mb-0 text-lg">Members</h6>
             </div>
+            <div
+                class="card-header border-b border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-4 px-6 flex items-center flex-wrap gap-3 justify-between">
+            
+                
+                <a href="{% url 'accounts:add-member' request.user.family.slug %}"
+                    class="btn btn-primary text-sm btn-sm px-3 py-3 rounded-lg flex items-center gap-2">
+                    <iconify-icon icon="ic:baseline-plus" class="icon text-xl line-height-1"></iconify-icon>
+                    Add Member
+                </a>
+                
+            </div>
             
             <div class="card-body">
                 <table id="selection-table"
                     class="border border-neutral-200 dark:border-neutral-600 rounded-lg border-separate	">
                     <thead>
                         <tr>
-                            
-                            
-
                             <th scope="col" class="text-neutral-800 dark:text-white">
                                 <div class="flex items-center gap-2">
                                     Member

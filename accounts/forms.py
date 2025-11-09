@@ -74,6 +74,67 @@ class RegistrationForm(UserCreationForm):
                 self.save_m2m()
         return user
 
+
+class MemberForm(UserCreationForm):
+    class Meta:
+        model = get_user_model()
+        fields = ("username", "title", "role", "profile_image", "first_name", "last_name", 'maiden_name', "biography", "gender", "email", "phone", "address", 'password1', 'password2')
+
+        widgets = {
+            'email': forms.EmailInput(attrs={
+                "class": "w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white",
+                "placeholder": _("Enter your email address"),
+            }),
+            'first_name': forms.TextInput(attrs={
+                "class": "w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white",
+                "placeholder": _("First name"),
+            }),
+            'last_name': forms.TextInput(attrs={
+                "class": "w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white",
+                "placeholder": _("Last name"),
+            }),
+            'password1': forms.PasswordInput(attrs={
+                "class": "w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white",
+                "placeholder": _("Enter password"),
+            }),
+            'password2': forms.PasswordInput(attrs={
+                "class": "w-full px-8 py-4 rounded-lg font-medium bg-gray-100 border border-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:border-gray-400 focus:bg-white",
+                "placeholder": _("Confirm password"),
+            }),
+            'gender': forms.Select(attrs={"class": "form-control rounded-lg form-select"}),
+            'title': forms.Select(attrs={"class": "form-control rounded-lg form-select"}),
+            'role': forms.Select(attrs={"class": "form-control rounded-lg form-select"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        for field_name, field in self.fields.items():
+            field.widget.attrs['autocomplete'] = 'off'
+            if self.initial.get(field_name) is None:
+                self.initial[field_name] = ''
+
+    def clean_email(self):
+        """Ensure email uniqueness across users."""
+        email = self.cleaned_data.get("email")
+        User = get_user_model()
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError(
+                _(f"This email ({email}) is already registered.")
+            )
+        return email
+
+    def save(self, commit=True):
+        """Save the user with email as username."""
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+
+        if commit:
+            user.save()
+            if hasattr(self, "save_m2m"):
+                self.save_m2m()
+        return user
+    
 class AccountUpdateForm(forms.ModelForm):
     
     class Meta:

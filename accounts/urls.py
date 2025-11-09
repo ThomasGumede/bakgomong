@@ -2,7 +2,7 @@ from django.urls import path
 from accounts.views.account import account_update, activate, activation_sent, add_social_links, confirm_email, custom_login, custom_logout, general, register, user_details
 from accounts.views.password import password_change, password_reset_request, password_reset_sent, passwordResetConfirm
 from accounts.views.family import delete_family, get_families, add_family, get_family, update_family
-from accounts.views.members import get_members
+from accounts.views.members import get_members, add_member
 
 app_name = "accounts"
 urlpatterns = [
@@ -30,5 +30,6 @@ urlpatterns = [
     path('dashboard/delete-family/<family_slug>', delete_family, name="delete-family"),
     
     path('dashboard/<family_slug>/members', get_members, name="get-members"),
+    path('dashboard/<family_slug>/add-member', add_member, name="add-member"),
 
 ]

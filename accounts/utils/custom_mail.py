@@ -17,7 +17,7 @@ def send_html_email(subject, to_email, template_name, context):
         email = EmailMessage(
             subject=subject,
             body=html_content,
-            from_email='BAKGOMONG Community <noreply@BAKGOMONG.co.za>',
+            from_email='BAKGOMONG Community <noreply@bakgomong.co.za>',
             to=[to_email],
         )
         email.content_subtype = 'html' 

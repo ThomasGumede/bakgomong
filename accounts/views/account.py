@@ -4,7 +4,7 @@ from accounts.models import Family
 from accounts.utils.custom_mail import send_email_confirmation_email, send_html_email, send_verification_email
 from django.shortcuts import redirect, render, get_object_or_404
 from accounts.utils.decorators import user_not_authenticated
-from accounts.utils.tokens import account_activation_token
+from accounts.utils.tokens import account_activation_token, verify_activation_token
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
@@ -70,35 +70,47 @@ def custom_logout(request):
 @user_not_authenticated
 def activate(request, uidb64, token):
     User = get_user_model()
+    user = None
+
     try:
         payload = jwt.decode(uidb64, settings.SECRET_KEY, algorithms=['HS256'])
         user = User.objects.get(pk=payload["user_id"], username=payload["username"])
-    except User.DoesNotExist:
+    except (User.DoesNotExist, jwt.ExpiredSignatureError, jwt.DecodeError) as e:
+        logger.error(f"Activation error: {e}")
         user = None
+
     
     if user and account_activation_token.check_token(user, token):
-        send_html_email("BBGI Community", user.email, "emails/email_to_all.html", {"user_names": user.get_full_name()})
-        if user.is_active == True:
-            messages.success(
-                request,
-                "Thank you for your email confirmation. Now you can login your account.",
-            )
-            return redirect("accounts:login")
         
-        user.is_active = True
-        user.is_email_activated = True
-        user.save(update_fields=["is_active", "is_email_activated"])
+        send_html_email(
+            "BBGI Community",
+            user.email,
+            "emails/email_to_all.html",
+            {"user_names": user.get_full_name()}
+        )
+
         
+        if not user.is_active:
+            user.is_active = True
+            user.is_email_activated = True
+            user.save(update_fields=["is_active", "is_email_activated"])
+
         messages.success(
             request,
-            "Thank you for your email confirmation. Now you can login your account.",
+            "Thank you for confirming your email. You can now log in."
         )
         return redirect("accounts:login")
-    else:
-        messages.error(request, f"Activation link is expired! New activation link was sent to {user.email}")
+
+    if user:
+        messages.error(
+            request,
+            f"Activation link is expired! A new activation link has been sent to {user.email}."
+        )
         sent = send_verification_email(user, request)
         if not sent:
-            logger.error(f"Something went wrong trying to send email to {user.username}")
+            logger.error(f"Failed to send activation email to {user.username}")
+    else:
+        messages.error(request, "Invalid activation link. Please request a new one.")
 
     return redirect("accounts:login")
 
@@ -146,7 +158,7 @@ def register(request):
             user.is_active = True
             user.family = family
             user.save()
-            # send_verification_email(user, request)
+            send_verification_email(user, request)
             login(request, user)
             messages.success(
                 request,
@@ -233,7 +245,3 @@ def add_social_links(request):
             return render(request, "accounts/manage/social.html", {"form": form})
         
     return render(request, "accounts/manage/social.html", {"form": form})
-
-
-def add_user(request):
-    pass

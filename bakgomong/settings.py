@@ -238,4 +238,4 @@ EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'noreply@bakgomong.co.za'
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = 'bakgomong <noreply@bakgomong.co.za>'
+DEFAULT_FROM_EMAIL = 'BAKMGOMONG <noreply@bakgomong.co.za>'

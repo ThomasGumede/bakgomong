@@ -82,7 +82,7 @@
                     </li>
 
                     <li>
-                        <a href="javascript:void(0)"><i class="ri-circle-fill circle-icon text-info-600 w-auto"></i> Add
+                        <a href="{% url 'accounts:add-member' request.user.family.slug %}"><i class="ri-circle-fill circle-icon text-info-600 w-auto"></i> Add
                             Member</a>
                     </li>
                     

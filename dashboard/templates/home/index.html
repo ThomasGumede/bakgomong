@@ -19,7 +19,7 @@ Home
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Clan Account Balance</span>
-                            <h6 class="font-semibold mt-[2px]">R50,000</h6>
+                            <h6 class="font-semibold mt-[2px]">R{{total_paid}}</h6>
                         </div>
                     </div>
                 </div>
@@ -44,7 +44,7 @@ Home
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Outstanding Balance</span>
-                            <h6 class="font-semibold mt-[2px]">R20 000</h6>
+                            <h6 class="font-semibold mt-[2px]">R{{total_unpaid}}</h6>
                         </div>
                     </div>
                 </div>
@@ -54,6 +54,31 @@ Home
             </div>
         </div>
     </div>
+    
+    {% if upcoming_meeting %}
+        <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
+            <div
+                class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#e9e0ff] dark:from-neutral-700 dark:to-neutral-800">
+                <div class="card-body p-0">
+                    <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span
+                                class="mb-0 w-[48px] h-[48px] bg-lilac-600 flex-shrink-0 text-white flex justify-center items-center rounded-full h6">
+                                <iconify-icon icon="fluent:people-20-filled" class="text-white text-2xl mb-0"></iconify-icon>
+                            </span>
+                            <div>
+                                <span class="font-medium text-neutral-600 text-base">Upcoming Meeting</span>
+                                <h6 class="font-semibold mt-[2px]">{{upcoming_meeting.title}}</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
+                        meeting on the {{upcoming_meeting.date_time_formatter}}
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% else %}
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#e9e0ff] dark:from-neutral-700 dark:to-neutral-800">
@@ -66,16 +91,19 @@ Home
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Upcoming Meeting</span>
-                            <h6 class="font-semibold mt-[2px]">Clan 4th AGM</h6>
+                            <h6 class="font-semibold mt-[2px]">No upcoming meeting yet</h6>
                         </div>
                     </div>
                 </div>
                 <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
-                    meeting on the 15/11/2025
+                    You can see upcoming meetings here
                 </p>
             </div>
         </div>
     </div>
+    {% endif %}
+        
+    
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#deffec] to-[#f6fffa] dark:from-neutral-700 dark:to-neutral-800">
@@ -88,12 +116,12 @@ Home
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Total members</span>
-                            <h6 class="font-semibold mt-[2px]">200</h6>
+                            <h6 class="font-semibold mt-[2px]">{{total_members}}</h6>
                         </div>
                     </div>
                 </div>
                 <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
-                    Each member contributes R10/month
+                    We currently have {{total_families}} famil{{ total_families|pluralize:"y,ies" }}
                 </p>
             </div>
         </div>
@@ -161,12 +189,13 @@ Home
     </div>
 </div>
 
-<!-- Table Start -->
+
+{% if payments.count > 0 %}
 <div class="card border-0 rounded-2xl mt-6">
     <div class="card-header">
         <div class="flex items-center flex-wrap gap-2 justify-between">
             <h6 class="font-bold text-lg mb-0">Payment History</h6>
-            <a href="javascript:void(0)"
+            <a href="{% if request.user.is_staff %}{% else %}{% endif %}"
                 class="text-primary-600 dark:text-primary-600 hover-text-primary flex items-center gap-1">
                 View All
                 <iconify-icon icon="solar:alt-arrow-right-linear" class="icon"></iconify-icon>
@@ -179,116 +208,55 @@ Home
                 <table class="table bordered-table sm-table mb-0">
                     <thead>
                         <tr>
-                            <th scope="col">Members </th>
-                            <th scope="col" class="text-center">Email</th>
-                            <th scope="col" class="text-center">Transaction ID</th>
-                            <th scope="col" class="text-center">Amount</th>
-                            <th scope="col" class="text-center">Payment Method</th>
-                            <th scope="col" class="text-center">Date</th>
-                            <th scope="col" class="text-center">Status</th>
+                    
+                            <th scope="col">Invoice</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Issued Date</th>
+                            <th scope="col">Amount</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
+                    
+                        {% for inv in payments %}
                         <tr>
-                            <td class="">
+                    
+                            <td><a href="{{inv.get_absolute_url}}" class="text-primary-600">{{inv.reference}}</a></td>
+                            <td>
                                 <div class="flex items-center">
-                                    <img src="{% static 'images/users/user1.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Dianne Russell</h6>
-                                    </div>
+                                    <img src="{% if inv.account.profile_image %}{{inv.account.profile_image.url}}{% else %}{% static 'dashboard/images/user-grid/user-grid-img13.png' %}{% endif %}"
+                                        alt="" class="shrink-0 w-10 h-10 rounded-full me-2 overflow-hidden">
+                                    <h6 class="text-base  mb-0 font-medium grow">{{inv.account.get_full_name}}</h6>
                                 </div>
                             </td>
-                            <td class="text-center">osgoodwy@gmail.com</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R10.00</td>
-                            <td class="text-center">Bank</td>
-                            <td class="text-center">24 Jun 2024</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-success-focus text-success-main dark:text-success-500 px-6 py-1 rounded-[50rem] font-medium text-sm">Active</span>
+                            <td>{{inv.created}}</td>
+                            <td>R{{inv.amount_due}}</td>
+                            <td> <span
+                                    class="{% if inv.is_paid == 'PAID' %}bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400{% elif inv.is_paid == 'PENDING' %}bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400{% else %}text-danger-600 bg-danger-100 dark:bg-danger-600/25 dark:text-danger-600{% endif %} px-6 py-1.5 rounded-full font-medium text-sm">{{inv.is_paid}}</span>
                             </td>
-                        </tr>
-                        <tr>
-                            <td class="">
-                                <div class="flex items-center">
-                                    <img src="{% static 'images/users/user2.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Wade Warren</h6>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <a href="{{inv.get_absolute_url}}"
+                                        class="w-8 h-8 bg-primary-50 dark:bg-primary-600/25 text-primary-600 rounded-full inline-flex items-center justify-center">
+                                        <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
+                                    </a>
+                    
+                                    <a ata-tooltip-target="tooltip-Success" data-tooltip-placement="top" href="javascript:void(0)"
+                                        class="w-8 h-8 bg-success-100 dark:bg-success-600/25 tooltip text-success-600 dark:text-success-400 rounded-full inline-flex items-center justify-center">
+                                        <iconify-icon icon="lucide:edit"></iconify-icon>
+                                    </a>
+                                    <div id="tooltip-Success" role="tooltip"
+                                        class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip dark:bg-gray-800">
+                                        Tooltip Success
+                                        <div class="tooltip-arrow" data-popper-arrow></div>
                                     </div>
+                    
                                 </div>
                             </td>
-                            <td class="text-center">redaniel@gmail.com</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R10.00</td>
-                            <td class="text-center">Bank</td>
-                            <td class="text-center">24 Jun 2024</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-success-focus text-success-main dark:text-success-500 px-6 py-1 rounded-[50rem] font-medium text-sm">Active</span>
-                            </td>
                         </tr>
-                        <tr>
-                            <td class="">
-                                <div class="flex items-center">
-                                    <img src="{% static 'images/users/user3.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Albert Flores</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center">seema@gmail.com</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R10.00</td>
-                            <td class="text-center">Bank</td>
-                            <td class="text-center">24 Jun 2024</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-success-focus text-success-main dark:text-success-500 px-6 py-1 rounded-[50rem] font-medium text-sm">Active</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="">
-                                <div class="flex items-center">
-                                    <img src="{% static 'images/users/user4.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Bessie Cooper </h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center">hamli@gmail.com</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R10.00</td>
-                            <td class="text-center">Bank</td>
-                            <td class="text-center">24 Jun 2024</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-success-focus text-success-main dark:text-success-500 px-6 py-1 rounded-[50rem] font-medium text-sm">Active</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="">
-                                <div class="flex items-center">
-                                    <img src="{% static 'images/users/user5.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Arlene McCoy</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center">zitka@mail.ru</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R10.00</td>
-                            <td class="text-center">Bank</td>
-                            <td class="text-center">24 Jun 2024</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-success-focus text-success-main dark:text-success-500 px-6 py-1 rounded-[50rem] font-medium text-sm">Active</span>
-                            </td>
-                        </tr>
+                        {% endfor %}
+                    
                     </tbody>
                 </table>
             </div>
@@ -296,102 +264,8 @@ Home
 
     </div>
 </div>
+{% endif %}
 
-<div class="card border-0 rounded-2xl mt-6">
-    <div class="card-header">
-        <div class="flex items-center flex-wrap gap-2 justify-between">
-            <h6 class="font-bold text-lg mb-0">Out standing payments</h6>
-            <a href="javascript:void(0)"
-                class="text-primary-600 dark:text-primary-600 hover-text-primary flex items-center gap-1">
-                View All
-                <iconify-icon icon="solar:alt-arrow-right-linear" class="icon"></iconify-icon>
-            </a>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="overflow-x-auto">
-            <div class="w-[100px]">
-                <table class="table bordered-table sm-table mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">Members </th>
-                            <th scope="col" class="text-center">Email</th>
-                            <th scope="col" class="text-center">Transaction ID</th>
-                            <th scope="col" class="text-center">Amount</th>
-                            
-                            <th scope="col" class="text-center">Due Date</th>
-                            <th scope="col" class="text-center">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="">
-                                <div class="flex items-center">
-                                    <img src="{% static 'images/users/user1.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Dianne Russell</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center">osgoodwy@gmail.com</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R100.00</td>
-                            
-                            <td class="text-center">24 Nov 2025</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-danger-100 dark:bg-danger-600/25 text-danger-600 dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm">Unpaid</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="">
-                                <div class="flex items-center">
-                                    <img src="{% static 'images/users/user2.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Wade Warren</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center">redaniel@gmail.com</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R1000.00</td>
-                            
-                            <td class="text-center">24 Jun 2025</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-danger-100 dark:bg-danger-600/25 text-danger-600 dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm">Unpaid</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="">
-                                <div class="flex items-center">
-                                    <img src="{% static 'images/users/user3.png' %}" alt=""
-                                        class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
-                                    <div class="grow">
-                                        <h6 class="text-base mb-0 font-medium">Albert Flores</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center">seema@gmail.com</td>
-                            <td class="text-center">CLN12345</td>
-                            <td class="text-center">R10.00</td>
-                            
-                            <td class="text-center">24 Jun 2025</td>
-                            <td class="text-center">
-                                <span
-                                    class="bg-danger-100 dark:bg-danger-600/25 text-danger-600 dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm">Unpaid</span>
-                            </td>
-                        </tr>
-                        
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    </div>
-</div>
 <!-- Table End -->
 {% endblock content %}
 
