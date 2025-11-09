@@ -6,14 +6,50 @@
     {% tailwind_preload_css %}
     {% tailwind_css %}
     {{form.media}}
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bakgomong</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block seo %}
+    <!-- ================== SEO META TAGS ================== -->
+    
+    <title>{% block title %}Bakgomong Clan Contribution System{% endblock title %}</title>
+    
+    <meta name="description"
+        content="{% block description %}Track, manage, and contribute to Bakgomong Clan projects and family funds — including events, burials, savings, and investments. Stay connected and build financial unity within the clan.{% endblock description %}">
+    <meta name="keywords"
+        content="Bakgomong Clan, clan contributions, family fund, stokvel, burial society, family savings, clan unity, community development, family leaders, South Africa">
+    <meta name="author" content="Bakgomong Clan Management">
+    
+    <!-- ================== OPEN GRAPH / FACEBOOK ================== -->
+    <meta property="og:title" content="Bakgomong Clan Contribution System">
+    <meta property="og:description"
+        content="Join the Bakgomong Clan’s digital contribution system — manage family payments, events, and savings online.">
+    <meta property="og:image" content="{% static 'images/logo.png' %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Bakgomong Clan Portal">
+    
+    <!-- ================== TWITTER CARD ================== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Bakgomong Clan Contribution System">
+    <meta name="twitter:description"
+        content="A modern, transparent contribution platform for the Bakgomong Clan — uniting families through shared financial goals.">
+    <meta name="twitter:image" content="{% static 'images/logo.png' %}">
+    
+    <!-- ================== FAVICON ================== -->
+    
+    <!-- ================== CANONICAL LINK ================== -->
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+    
+    {% endblock seo %}
     <!-- Fav Icon -->
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/apple-touch-icon.png' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon-16x16.png' %}">
     <link rel="manifest" href="{% static 'images/site.webmanifest' %}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bakgomong Clan">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;display=swap"
         rel="stylesheet" />
@@ -344,11 +380,75 @@
 <script src="{% static 'js/app.js' %}"></script>
 
 
-
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register("{% static 'js/serviceworker.js' %}")
+                .then(function (registration) {
+                    console.log('ServiceWorker registered with scope:', registration.scope);
+                })
+                .catch(function (error) {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+        });
+    }
+</script>
 {% block scripts %}
     
 {% endblock scripts %}
     
+<div id="installPrompt" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full text-center relative">
+        <button id="closeInstallPrompt"
+            class="absolute top-2 right-3 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+
+        <img src="{% static 'images/android-chrome-192x192.png' %}" alt="Bakgomong Logo"
+            class="mx-auto w-20 h-20 mb-4 rounded-full shadow-md">
+
+        <h2 class="text-xl font-bold text-gray-800 mb-1">Install Bakgomong App</h2>
+        <p class="text-gray-500 text-sm mb-5">Add Bakgomong Clan Portal to your home screen for easy access and offline
+            use.</p>
+
+        <button id="installButton" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
+            Install App
+        </button>
+    </div>
+</div>
+<script>
+    let deferredPrompt;
+    const installPrompt = document.getElementById('installPrompt');
+    const installButton = document.getElementById('installButton');
+    const closePrompt = document.getElementById('closeInstallPrompt');
+
+    // Detect PWA install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome from showing default mini-infobar
+        e.preventDefault();
+        deferredPrompt = e;
+        // Show our custom prompt after slight delay
+        setTimeout(() => installPrompt.classList.remove('hidden'), 2000);
+    });
+
+    // Handle click on Install button
+    installButton.addEventListener('click', async () => {
+        installPrompt.classList.add('hidden');
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const {outcome} = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('User accepted install');
+            } else {
+                console.log('User dismissed install');
+            }
+            deferredPrompt = null;
+        }
+    });
+
+    // Close button
+    closePrompt.addEventListener('click', () => {
+        installPrompt.classList.add('hidden');
+    });
+</script>
 
 </body>
 

@@ -128,8 +128,8 @@ if DEBUG:
     STATIC_ROOT = os.path.join(BASE_DIR, 'static_root')
     
 else:
-    ALLOWED_HOSTS = ['bakgomong.co.za', 'www.bakgomong.co.za', 'localhost']
-    CSRF_TRUSTED_ORIGINS = ['https://127.0.0.1', 'https://localhost', 'https://bakgomong.co.za', 'https://www.bakgomong.co.za']
+    ALLOWED_HOSTS = ['wedodev.co.za', 'www.wedodev.co.za', 'localhost']
+    CSRF_TRUSTED_ORIGINS = ['https://127.0.0.1', 'https://localhost', 'https://wedodev.co.za', 'https://www.wedodev.co.za']
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     X_FRAME_OPTIONS = "SAMEORIGIN"
     
