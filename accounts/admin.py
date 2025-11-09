@@ -94,7 +94,7 @@ class AccountAdmin(UserAdmin):
                 "family",
                 "is_active",
                 "is_staff",
-                "is_superuser",
+                "is_superuser", "groups",
                 
             ),
         }),
@@ -129,7 +129,7 @@ class AccountAdmin(UserAdmin):
             "fields": ("role", "family")
         }),
         (_("Permissions & Status"), {
-            "fields": ("is_active", "is_staff", "is_superuser")
+            "fields": ("is_active", "is_staff", "is_superuser", "groups",)
         }),
         (_("Timestamps"), {
             "fields": ("created", "updated")
