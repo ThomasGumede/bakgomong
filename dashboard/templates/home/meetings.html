@@ -23,11 +23,11 @@ Calendar
             <div class="card-body p-6">
 
                 {% if request.user.is_staff or request.user.role == 'CLAN CHAIRPERSON' or request.user.role == 'FAMILY LEADER' %}
-                <button type="button" data-modal-target="popup-modal" data-modal-toggle="popup-modal"
+                <a href="{% url 'admin:index' %}"
                     class="btn btn-primary text-sm btn-sm px-3 py-3 w-full rounded-lg flex items-center gap-2 mb-8">
                     <iconify-icon icon="fa6-regular:square-plus" class="icon text-lg line-height-1"></iconify-icon>
                     Add Meeting
-                </button>
+                </a>
                 {% endif %}
 
                

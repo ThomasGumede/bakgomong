@@ -11,7 +11,7 @@ Clan Documents
                 class="card-header border-b border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-4 px-6 flex items-center flex-wrap gap-3 justify-between">
 
                 {% if request.user.is_staff %}
-                <a href="" class="btn btn-primary text-sm btn-sm px-3 py-3 rounded-lg flex items-center gap-2">
+                <a href="{% url 'admin:index' %}" class="btn btn-primary text-sm btn-sm px-3 py-3 rounded-lg flex items-center gap-2">
                     <iconify-icon icon="ic:baseline-plus" class="icon text-xl line-height-1"></iconify-icon>
                     Add File
                 </a>
@@ -74,24 +74,13 @@ Clan Documents
 
                                 <td class="text-center">
                                     <div class="flex items-center gap-3 justify-center">
-                                        <a href=""
+                                        <a href="{% url 'dashboard:download-file' document.id %}"
                                             class="bg-info-100 dark:bg-info-600/25 hover:bg-info-200 text-info-600 dark:text-info-400 font-medium w-10 h-10 flex justify-center items-center rounded-full">
                                             <iconify-icon icon="majesticons:eye-line"
                                                 class="icon text-xl"></iconify-icon>
                                         </a>
 
-                                        {% if request.user.is_staff %}
-
-                                        <button type="button"
-                                            class="bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400 bg-hover-success-200 font-medium w-10 h-10 flex justify-center items-center rounded-full">
-                                            <iconify-icon icon="lucide:edit" class="menu-icon"></iconify-icon>
-                                        </button>
-                                        <a href=""
-                                            class="remove-item-btn bg-danger-100 dark:bg-danger-600/25 hover:bg-danger-200 text-danger-600 dark:text-danger-500 font-medium w-10 h-10 flex justify-center items-center rounded-full">
-                                            <iconify-icon icon="fluent:delete-24-regular"
-                                                class="menu-icon"></iconify-icon>
-                                        </a>
-                                        {% endif %}
+                                       
                                     </div>
                                 </td>
                             </tr>
