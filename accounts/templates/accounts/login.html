@@ -4,10 +4,53 @@
 <html lang="en">
 
 <head>
+    {% tailwind_preload_css %}
+    {% tailwind_css %}
+    {{form.media}}
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bakgomong - Login</title>
-    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}" sizes="16x16" />
+    {% block seo %}
+    <!-- ================== SEO META TAGS ================== -->
+    
+    <title>{% block title %}Bakgomong Clan - Login{% endblock title %}</title>
+    
+    <meta name="description"
+        content="{% block description %}Track, manage, and contribute to Bakgomong Clan projects and family funds — including events, burials, savings, and investments. Stay connected and build financial unity within the clan.{% endblock description %}">
+    <meta name="keywords"
+        content="Bakgomong Clan, clan contributions, family fund, stokvel, burial society, family savings, clan unity, community development, family leaders, South Africa">
+    <meta name="author" content="Bakgomong Clan Management">
+    
+    <!-- ================== OPEN GRAPH / FACEBOOK ================== -->
+    <meta property="og:title" content="Bakgomong Clan - Login">
+    <meta property="og:description"
+        content="Join the Bakgomong Clan’s digital - Login — manage family payments, events, and savings online.">
+    <meta property="og:image" content="{% static 'images/logo.png' %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Bakgomong Clan Portal">
+    
+    <!-- ================== TWITTER CARD ================== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Bakgomong Clan - Login">
+    <meta name="twitter:description"
+        content="A modern, transparent contribution platform for the Bakgomong Clan — uniting families through shared financial goals.">
+    <meta name="twitter:image" content="{% static 'images/logo.png' %}">
+    
+    <!-- ================== FAVICON ================== -->
+    
+    <!-- ================== CANONICAL LINK ================== -->
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+    
+    
+    {% endblock seo %}
+    <!-- Fav Icon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static 'images/site.webmanifest' %}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bakgomong Clan">
     <!-- google fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;display=swap"
@@ -66,6 +109,7 @@
             </div>
             <form method="post">
                 {% csrf_token %}
+                {% include 'includes/errors.html' %}
                 <div class="icon-field mb-4 relative">
                     <span class="absolute start-4 top-1/2 -translate-y-1/2 pointer-events-none flex text-xl">
                         <iconify-icon icon="mage:email"></iconify-icon>

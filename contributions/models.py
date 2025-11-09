@@ -121,9 +121,7 @@ class MemberContribution(AbstractCreate):
                 return ref
             
     def save(self, *args, **kwargs):
-        # Automatically generate reference if not set
-        if not self.reference:
-            self.reference = self.generate_reference()
+        self.reference = self.generate_reference()
         super().save(*args, **kwargs)
         
     def get_absolute_url(self):
