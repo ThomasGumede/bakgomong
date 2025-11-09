@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth.admin import UserAdmin
 
 from accounts.models import Account, Family
 
@@ -42,7 +43,7 @@ class FamilyAdmin(admin.ModelAdmin):
 # Account Admin
 # ------------------------------------------------------------
 @admin.register(Account)
-class AccountAdmin(admin.ModelAdmin):
+class AccountAdmin(UserAdmin):
     def profile_image_preview(self, obj):
         if obj.profile_image:
             return format_html('<img src="{}" width="50" height="50" style="border-radius:50%;" />', obj.profile_image.url)
@@ -55,6 +56,52 @@ class AccountAdmin(admin.ModelAdmin):
     ordering = ("-created",)
     readonly_fields = ("created", "updated", "profile_image_preview")
 
+    add_fieldsets = (
+        ("Personal Info", {
+            "fields": (
+                "profile_image_preview",
+                "profile_image",
+                "username",
+                "first_name",
+                "last_name",
+                "email",
+                "title",
+                "gender",
+                "password1",
+                "password2",
+                
+            ),
+        }),
+        ("Member Info", {
+            "fields": (
+                "biography", 
+            ),
+        }),
+        ("Contact & Socials", {
+            "fields": (
+                "phone",
+                "address",
+                "facebook",
+                "twitter",
+                "instagram",
+                "linkedIn",
+            ),
+        }),
+        
+        ("Permissions", {
+            "fields": (
+                "role",
+                "family",
+                "is_active",
+                "is_staff",
+                "is_superuser",
+                
+            ),
+        }),
+        ("Important Dates", {
+            "fields": ("last_login", "created", "updated"),
+        }),
+    )
     fieldsets = (
         (_("Personal Information"), {
             "fields": (
@@ -62,12 +109,21 @@ class AccountAdmin(admin.ModelAdmin):
                 "profile_image_preview",
                 "title",
                 "first_name",
+                "last_name",
                 "email",
                 "phone",
                 "gender",
                 "maiden_name",
                 "biography",
             )
+        }),
+        ("Contact & Socials", {
+            "fields": (
+                "facebook",
+                "twitter",
+                "instagram",
+                "linkedIn",
+            ),
         }),
         (_("Clan Information"), {
             "fields": ("role", "family")
