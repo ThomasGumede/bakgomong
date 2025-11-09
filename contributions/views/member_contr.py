@@ -18,7 +18,6 @@ def member_contributions_list(request, family_slug=None):
     - If user is a normal member, show only their own contributions.
     - If user is admin/staff, show all contributions.
     """
-    user = request.user
 
     # 1️⃣ Filter by role
     if family_slug:
@@ -30,7 +29,7 @@ def member_contributions_list(request, family_slug=None):
     else:
         # Regular member - only their own contributions
         family = None
-        contributions = MemberContribution.objects.filter(account=user).select_related('account', 'contribution_type')
+        contributions = MemberContribution.objects.all().select_related('account', 'contribution_type')
 
     # 2️⃣ Optional: Summary Totals
     total_contributed = contributions.filter(is_paid='PAID').aggregate(total=Sum('amount_due'))["total"] or 0

@@ -24,7 +24,7 @@ def create_member_contributions(sender, instance, created, **kwargs):
             contribution_type=instance,
             amount_due=instance.amount,
             due_date=instance.due_date or timezone.now().date(),
-            is_paid=False,
+            is_paid='NOT PAID',
         )
         for member in active_members
     ]
