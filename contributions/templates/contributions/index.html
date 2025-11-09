@@ -1,0 +1,131 @@
+{% extends '_base.html' %}
+{% load static %}
+{% block dash_title %}
+Clan Contributions
+{% endblock dash_title %}
+{% block content %}
+<div class="grid grid-cols-12">
+    <div class="col-span-12">
+        <div class="card h-full p-0 rounded-xl border-0 overflow-hidden">
+            <div
+                class="card-header border-b border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-4 px-6 flex items-center flex-wrap gap-3 justify-between">
+
+                {% if request.user.is_staff %}
+                <a href="{% url 'contributions:add-contribution' %}" class="btn btn-primary text-sm btn-sm px-3 py-3 rounded-lg flex items-center gap-2">
+                    <iconify-icon icon="ic:baseline-plus" class="icon text-xl line-height-1"></iconify-icon>
+                    Add Contribution
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body p-6">
+                <div class="table-responsive scroll-sm">
+                    <table class="table bordered-table sm-table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Title</th>
+                                <th scope="col">amount</th>
+                                <th scope="col">recurrence</th>
+                                <th scope="col">Contributed Amount</th>
+                                <th scope="col">Created By</th>
+                                <th scope="col">Created Date</th>
+                                <th scope="col" class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contr in contributions %}
+
+                            <tr>
+                                
+                                <td><a href="{{contr.get_absolute_url}}" class="hover:text-red-500 hover:font-bold">{{contr.name}}</a></td>
+                                <td>R{{contr.amount}}</td>
+                                <td>{{contr.recurrence}}</td>
+                                <td>R{{contr.total_collected}}</td>
+                                <td>
+                                    <div class="flex items-center">
+                                        <img src="{% if contr.created_by.profile_image %}{{contr.created_by.profile_image.url}}{% else %}{% static 'dashboard/images/user-grid/user-grid-img13.png' %}{% endif %}"
+                                            alt="{{contr.created_by.get_full_name}}"
+                                            class="w-10 h-10 rounded-full shrink-0 me-2 overflow-hidden">
+                                        <div class="grow">
+                                            <span
+                                                class="text-base mb-0 font-normal text-secondary-light">{{contr.created_by.get_full_name|truncatechars:20}}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+
+                                <td>{{contr.created|date:"d M Y"}}</td>
+                                <td class="text-center">
+                                    <div class="flex items-center gap-3 justify-center">
+                                        <a href="{{contr.get_absolute_url}}"
+                                            class="bg-info-100 dark:bg-info-600/25 hover:bg-info-200 text-info-600 dark:text-info-400 font-medium w-10 h-10 flex justify-center items-center rounded-full">
+                                            <iconify-icon icon="majesticons:eye-line"
+                                                class="icon text-xl"></iconify-icon>
+                                        </a>
+
+                                        {% if request.user.is_staff %}
+
+                                        <a href="{{contr.get_update_url}}"
+                                            class="bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400 bg-hover-success-200 font-medium w-10 h-10 flex justify-center items-center rounded-full">
+                                            <iconify-icon icon="lucide:edit" class="menu-icon"></iconify-icon>
+                                        </a>
+                                        <a href=""
+                                            class="remove-item-btn bg-danger-100 dark:bg-danger-600/25 hover:bg-danger-200 text-danger-600 dark:text-danger-500 font-medium w-10 h-10 flex justify-center items-center rounded-full">
+                                            <iconify-icon icon="fluent:delete-24-regular"
+                                                class="menu-icon"></iconify-icon>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+
+                        </tbody>
+                    </table>
+                </div>
+                {% if other_docs.count > 11 %}
+                <div class="flex items-center justify-between flex-wrap gap-2 mt-6">
+                    <span>Showing 1 to 10 of 12 entries</span>
+                    <ul class="pagination flex flex-wrap items-center gap-2 justify-center">
+                        <li class="page-item">
+                            <a class="page-link bg-neutral-300 dark:bg-neutral-600 text-secondary-light font-semibold rounded-lg border-0 flex items-center justify-center h-8 w-8 text-base"
+                                href="javascript:void(0)"><iconify-icon icon="ep:d-arrow-left"
+                                    class=""></iconify-icon></a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link text-secondary-light font-semibold rounded-lg border-0 flex items-center justify-center h-8 w-8 text-base bg-primary-600 text-white"
+                                href="javascript:void(0)">1</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-neutral-300 dark:bg-neutral-600 text-secondary-light font-semibold rounded-lg border-0 flex items-center justify-center h-8 w-8"
+                                href="javascript:void(0)">2</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-neutral-300 dark:bg-neutral-600 text-secondary-light font-semibold rounded-lg border-0 flex items-center justify-center h-8 w-8 text-base"
+                                href="javascript:void(0)">3</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-neutral-300 dark:bg-neutral-600 text-secondary-light font-semibold rounded-lg border-0 flex items-center justify-center h-8 w-8 text-base"
+                                href="javascript:void(0)">4</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-neutral-300 dark:bg-neutral-600 text-secondary-light font-semibold rounded-lg border-0 flex items-center justify-center h-8 w-8 text-base"
+                                href="javascript:void(0)">5</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-neutral-300 dark:bg-neutral-600 text-secondary-light font-semibold rounded-lg border-0 flex items-center justify-center h-8 w-8 text-base"
+                                href="javascript:void(0)"> <iconify-icon icon="ep:d-arrow-right"
+                                    class=""></iconify-icon> </a>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+
+{% endblock scripts %}

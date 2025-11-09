@@ -1,0 +1,154 @@
+{% extends '_base.html' %}
+{% load static %}
+{% block dash_title %}
+{% if family %} {{family.name}} Invoices {% elif user %} {{user.get_full_name}} Invoices {% else %} Invoice List {% endif %}
+{% endblock dash_title %}
+{% block content %}
+<div class="grid grid-cols-12">
+    <div class="col-span-12">
+        <div class="card border-0">
+            <!-- <div class="card-header flex flex-wrap items-center justify-between gap-3">
+                
+                <div class="flex flex-wrap items-center gap-3">
+                    
+                    <a href="invoice-add.html"
+                        class="btn btn-sm text-white bg-primary-600 hover:bg-primary-700 flex items-center gap-2"><i
+                            class="ri-add-line"></i> Create Invoice</a>
+                </div>
+            </div> -->
+            <div class="card-body">
+                <div class="table-responsive scroll-sm">
+                    <table id="selection-table" class="table bordered-table mb-0">
+                        <thead>
+                            <tr>
+                                
+                                <th scope="col">Invoice</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Issued Date</th>
+                                <th scope="col">Amount</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                            {% for inv in contributions %}                          
+                            <tr>
+                                
+                                <td><a href="{{inv.get_absolute_url}}" class="text-primary-600">{{inv.reference}}</a></td>
+                                <td>
+                                    <div class="flex items-center">
+                                        <img src="{% if inv.account.profile_image %}{{inv.account.profile_image.url}}{% else %}{% static 'dashboard/images/user-grid/user-grid-img13.png' %}{% endif %}" alt=""
+                                            class="shrink-0 w-10 h-10 rounded-full me-2 overflow-hidden">
+                                        <h6 class="text-base  mb-0 font-medium grow">{{inv.account.get_full_name}}</h6>
+                                    </div>
+                                </td>
+                                <td>{{inv.created}}</td>
+                                <td>R{{inv.amount_due}}</td>
+                                <td> <span
+                                        class="{% if inv.is_paid == 'PAID' %}bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400{% elif inv.is_paid == 'PENDING' %}bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400{% else %}text-danger-600 bg-danger-100 dark:bg-danger-600/25 dark:text-danger-600{% endif %} px-6 py-1.5 rounded-full font-medium text-sm">{{inv.is_paid}}</span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <a href="{{inv.get_absolute_url}}"
+                                            class="w-8 h-8 bg-primary-50 dark:bg-primary-600/25 text-primary-600 rounded-full inline-flex items-center justify-center">
+                                            <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
+                                        </a>
+                                        
+                                        <a ata-tooltip-target="tooltip-Success" data-tooltip-placement="top" href="javascript:void(0)"
+                                            class="w-8 h-8 bg-success-100 dark:bg-success-600/25 tooltip text-success-600 dark:text-success-400 rounded-full inline-flex items-center justify-center">
+                                            <iconify-icon icon="lucide:edit"></iconify-icon>
+                                        </a>
+                                        <div id="tooltip-Success" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip dark:bg-gray-800">
+                                            Tooltip Success
+                                            <div class="tooltip-arrow" data-popper-arrow></div>
+                                        </div>
+                                        
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                        </tbody>
+                    </table>
+                </div>
+
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    if (document.getElementById("selection-table") && typeof simpleDatatables.DataTable !== 'undefined') {
+
+        let multiSelect = true;
+        let rowNavigation = false;
+        let table = null;
+
+        const resetTable = function () {
+            if (table) {
+                table.destroy();
+            }
+
+            const options = {
+                columns: [
+                    {select: [0, 6], sortable: false} // Disable sorting on the first column (index 0 and 6)
+                ],
+                rowRender: (row, tr, _index) => {
+                    if (!tr.attributes) {
+                        tr.attributes = {};
+                    }
+                    if (!tr.attributes.class) {
+                        tr.attributes.class = "";
+                    }
+                    if (row.selected) {
+                        tr.attributes.class += " selected";
+                    } else {
+                        tr.attributes.class = tr.attributes.class.replace(" selected", "");
+                    }
+                    return tr;
+                }
+            };
+            if (rowNavigation) {
+                options.rowNavigation = true;
+                options.tabIndex = 1;
+            }
+
+            table = new simpleDatatables.DataTable("#selection-table", options);
+
+            // Mark all rows as unselected
+            table.data.data.forEach(data => {
+                data.selected = false;
+            });
+
+            table.on("datatable.selectrow", (rowIndex, event) => {
+                event.preventDefault();
+                const row = table.data.data[rowIndex];
+                if (row.selected) {
+                    row.selected = false;
+                } else {
+                    if (!multiSelect) {
+                        table.data.data.forEach(data => {
+                            data.selected = false;
+                        });
+                    }
+                    row.selected = true;
+                }
+                table.update();
+            });
+        };
+
+        // Row navigation makes no sense on mobile, so we deactivate it and hide the checkbox.
+        const isMobile = window.matchMedia("(any-pointer:coarse)").matches;
+        if (isMobile) {
+            rowNavigation = false;
+        }
+
+        resetTable();
+    }
+</script>
+{% endblock scripts %}
