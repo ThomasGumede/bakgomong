@@ -33,8 +33,8 @@ def member_contributions_list(request, family_slug=None):
         contributions = MemberContribution.objects.filter(account=user).select_related('account', 'contribution_type')
 
     # 2️⃣ Optional: Summary Totals
-    total_contributed = contributions.filter(is_paid=True).aggregate(total=Sum('amount_due'))["total"] or 0
-    total_due = contributions.filter(is_paid=False).aggregate(total=Sum('amount_due'))["total"] or 0
+    total_contributed = contributions.filter(is_paid='PAID').aggregate(total=Sum('amount_due'))["total"] or 0
+    total_due = contributions.filter(is_paid='NOT PAID').aggregate(total=Sum('amount_due'))["total"] or 0
     grand_total = contributions.aggregate(total=Sum('amount_due'))["total"] or 0
 
     # 3️⃣ Prepare context

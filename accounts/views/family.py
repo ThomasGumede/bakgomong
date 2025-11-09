@@ -85,7 +85,7 @@ def update_family(request, family_slug):
     family = get_object_or_404(Family, slug=family_slug)
     form = FamilyForm(instance=family)
     if request.method == 'POST':
-        form = FamilyForm(request.POST, instance=Family)
+        form = FamilyForm(request.POST, instance=family)
         if form.is_valid():
             family = form.save()
             messages.success(request, "Family updated successfully")
