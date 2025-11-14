@@ -24,6 +24,7 @@ def index(request):
         ).order_by("meeting_date").first()
     context["total_members"] = Account.objects.count()
     context["total_families"] = Family.objects.count()
+    context["family"] = user.family
     
     if user.is_staff or user.role.lower() in ["CLAN CHAIRPERSORN", "FAMILY LEADER"]:
         
@@ -40,7 +41,7 @@ def index(request):
 
     else:
         
-        context["family"] = user.family
+        
         context["member_contributions"] = MemberContribution.objects.filter(account=user)
         context["member_payments"] = Payment.objects.filter(account=user)
         context["total_paid"] = context["member_payments"].aggregate(total=Sum("amount"))["total"] or 0

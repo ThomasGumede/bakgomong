@@ -2,6 +2,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
+from accounts.models import Family
 from accounts.utils.abstracts import AbstractCreate, AbstractPayment
 from django.contrib.auth import get_user_model
 
@@ -11,6 +12,12 @@ import random
 from accounts.utils.validators import verify_rsa_phone
 
 PHONE_VALIDATOR = verify_rsa_phone()
+
+class SCOPE_CHOICES(models.TextChoices):
+        CLAN = "clan", _("Entire Clan")
+        FAMILY_LEADERS = "family_leaders", _("Family Leaders")
+        FAMILY = "family", _("Specific Family")
+        EXECUTIVES = "Executives", _("Executives")
 
 class ContributionType(AbstractCreate):
     class Recurrence(models.TextChoices):
@@ -30,6 +37,7 @@ class ContributionType(AbstractCreate):
         EMERGENCY = 'emergency', _('Emergency Support')
         EDUCATION = 'education', _('Education or Skills Fund')
         OTHER = 'other', _('Other')
+        
 
     name = models.CharField(
         max_length=100,
@@ -43,6 +51,7 @@ class ContributionType(AbstractCreate):
         default=Category.OTHER,
         help_text=_("Select the contribution category (e.g. Burial, Savings, Event)"),
     )
+    family = models.ForeignKey(Family, on_delete=models.SET_NULL, null=True, blank=True, related_name='family_contribution_types')
     amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -54,6 +63,7 @@ class ContributionType(AbstractCreate):
         default=Recurrence.ONCE_OFF,
         help_text=_("Specify if this contribution is once-off, monthly, or annual"),
     )
+    scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default=SCOPE_CHOICES.CLAN)
     due_date = models.DateField(blank=True, null=True, help_text=_("For Annual and Once-off contributions"))
     created_by = models.ForeignKey(
         get_user_model(),
@@ -75,7 +85,20 @@ class ContributionType(AbstractCreate):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
-    
+        
+    def clean(self):
+        """
+        Enforce family selection when scope is 'family',
+        and ensure family is None for other scopes.
+        """
+        from django.core.exceptions import ValidationError
+
+        if self.scope == SCOPE_CHOICES.FAMILY and not self.family:
+            raise ValidationError("A family must be selected when scope is 'Specific Family'.")
+
+        if self.scope != SCOPE_CHOICES.FAMILY and self.family is not None:
+            raise ValidationError("Family should only be set for 'Specific Family' scope.")
+            
     @property
     def total_collected(self):
         from .models import Payment 
@@ -155,7 +178,7 @@ class Payment(AbstractCreate, AbstractPayment):
         ordering = ["-payment_date"]
 
     def __str__(self):
-        return f"{self.account.get_full_name()} - {self.amount} ({self.contribution_type.name})"
+        return f"{self.account.get_full_name()} - {self.amount} "
 
     def update_member_contribution_status(self, status):
         

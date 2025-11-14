@@ -15,6 +15,7 @@ class Family(AbstractCreate):
     name = models.CharField(max_length=300, help_text=_('Enter family name e.g Dladla Family'), unique=True)
     slug = models.SlugField(max_length=400, unique=True, db_index=True)
     leader = models.OneToOneField('Account', related_name='family_leader', on_delete=models.SET_NULL, null=True, blank=True)
+    is_approved = models.BooleanField(default=False, help_text=_("Should be approved by executives"))
     
     class Meta:
         verbose_name = _("Family")
@@ -48,6 +49,7 @@ class Account(AbstractUser, AbstractProfile):
     biography = models.TextField(blank=True)
     role = models.CharField(max_length=100, choices=Role.choices, default=Role.MEMBER)
     family = models.ForeignKey(Family, related_name='members', on_delete=models.SET_NULL, null=True, blank=True)
+    is_approved = models.BooleanField(default=False, help_text=_("Should be approved by executives"))
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     

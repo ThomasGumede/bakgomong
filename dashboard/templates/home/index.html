@@ -26,12 +26,13 @@ Home
                 <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
                     <span
                         class="bg-success-focus px-1.5 py-[2px] rounded-[6px] font-medium text-success-600 dark:text-success-500 text-sm flex items-center gap-1">
-                        <i class="ri-arrow-right-up-line"></i> 95%
-                    </span> Last month R24,000.00
+                        <i class="ri-arrow-right-up-line"></i> 
+                    </span> Total Balance
                 </p>
             </div>
         </div>
     </div>
+    {% if request.user.is_staff %}
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#ffefdd] dark:from-neutral-700 dark:to-neutral-800">
@@ -54,6 +55,30 @@ Home
             </div>
         </div>
     </div>
+    {% else %}
+    <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
+        <div
+            class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#ffefdd] dark:from-neutral-700 dark:to-neutral-800">
+            <div class="card-body p-0">
+                <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+                    <div class="flex items-center gap-2.5">
+                        <span
+                            class="mb-0 w-[48px] h-[48px] bg-warning-600 flex-shrink-0 text-white flex justify-center items-center rounded-full h6">
+                            <img src="{% static 'images/home-eleven/icons/home-eleven-icon2.svg' %}" alt="">
+                        </span>
+                        <div>
+                            <span class="font-medium text-neutral-600 text-base">Outstanding Balance</span>
+                            <h6 class="font-semibold mt-[2px]">R{{total_unpaid}}</h6>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
+                    Amount You Have Not Paid
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     
     {% if upcoming_meeting %}
         <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">

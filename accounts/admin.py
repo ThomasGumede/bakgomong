@@ -1,17 +1,28 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.admin import UserAdmin
 
 from accounts.models import Account, Family
+from accounts.utils.abstracts import Role
 
+@admin.action(description="Approve selected members/family")
+def approve_members(modeladmin, request, queryset):
+    if not request.user.role in [Role.CLAN_CHAIRPERSON, Role.DEP_CHAIRPERSON, Role.DEP_SECRETARY, Role.KGOSANA, Role.SECRETARY, Role.TREASURER, Role.FAMILY_LEADER]:
+        messages.error(request, "Only executives are allowed to approve members.")
+        return
+    
+    queryset.update(
+        is_approved=True,
+    )
+    messages.success(request, f"{queryset.count()} member(s) or families approved successfully.")
 
 # ------------------------------------------------------------
 # Inline display: show all members under a family
 # ------------------------------------------------------------
 class AccountInline(admin.TabularInline):
     model = Account
-    fields = ("first_name", "email", "phone", "role", "is_active")
+    fields = ("first_name", "email", "phone", "role", "is_active", "is_approved")
     extra = 0
     readonly_fields = ("first_name", "email", "phone", "role")
     can_delete = False
@@ -31,12 +42,13 @@ class FamilyAdmin(admin.ModelAdmin):
         return obj.members.count() if hasattr(obj, 'members') else obj.families.count()
     member_count.short_description = _("Members")
     
-    list_display = ("name", "leader_display", "member_count", "created")
+    list_display = ("name", "leader_display", "member_count", "created", "is_approved")
     search_fields = ("name", "leader__first_name")
-    list_filter = ("created",)
+    list_filter = ("created", "is_approved",)
     prepopulated_fields = {"slug": ("name",)}
     inlines = [AccountInline]
     ordering = ("-created",)
+    actions = [approve_members]
 
 
 # ------------------------------------------------------------
@@ -50,12 +62,12 @@ class AccountAdmin(UserAdmin):
         return "—"
     profile_image_preview.short_description = _("Profile Image Preview")
     
-    list_display = ("profile_image_preview", "first_name", "email", "family", "role", "is_active", "created")
+    list_display = ("profile_image_preview", "first_name", "email", "family", "role", "is_active", "is_approved")
     list_filter = ("role", "is_active", "gender", "family")
     search_fields = ("first_name", "email", "phone")
     ordering = ("-created",)
     readonly_fields = ("created", "updated", "profile_image_preview")
-
+    actions = [approve_members]
     add_fieldsets = (
         ("Personal Info", {
             "fields": (
@@ -93,7 +105,7 @@ class AccountAdmin(UserAdmin):
                 "role",
                 "family",
                 "is_active",
-                "is_staff",
+                "is_staff", "is_approved"
                 "is_superuser", "groups",
                 
             ),
@@ -129,7 +141,7 @@ class AccountAdmin(UserAdmin):
             "fields": ("role", "family")
         }),
         (_("Permissions & Status"), {
-            "fields": ("is_active", "is_staff", "is_superuser", "groups",)
+            "fields": ("is_active", "is_staff", "is_superuser", "is_approved", "groups",)
         }),
         (_("Timestamps"), {
             "fields": ("created", "updated")

@@ -24,9 +24,14 @@ class Gender(models.TextChoices):
     OTHER = ("OTHER", "Other")
     
 class Role(models.TextChoices):
-    CLAN_CHAIRPERSON = ('CLAN CHAIRPERSON', 'Clan Chairperson')
+    KGOSANA = ('KGOSANA', 'Kgosana')
+    CLAN_CHAIRPERSON = ('CHAIRPERSON', 'Chairperson')
     FAMILY_LEADER = ('FAMILY LEADER', 'Family leader')
     MEMBER = ('MEMBER', 'Member')
+    DEP_CHAIRPERSON = ('DEP-CHAIRPERSON', 'Deputy Chairperson')
+    SECRETARY = ('SECRETARY', 'Secretary')
+    DEP_SECRETARY = ('DEP SECRETARY', 'Deputy Secretary')
+    TREASURER = ('TREASURER', 'Treasurer')
 
 class AbstractProfile(models.Model):
     address = models.CharField(max_length=300, blank=True, null=True)
