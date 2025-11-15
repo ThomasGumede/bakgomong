@@ -108,15 +108,14 @@
                     style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;">
 
                     <tr>
-                        <td style="padding:20px 24px;background:linear-gradient(90deg,#0b6e99,#2b9bd6);color:white;">
-                            <table width="100%">
+                        <td style="padding:20px 24px;background:#f1f5f9;color:#0b6e99;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td align="left" style="vertical-align:middle;">
-                                        <img src="https://via.placeholder.com/56x56.png?text=BG" width="56" height="56"
-                                            alt="BBGI" style="display:block;border-radius:8px;" />
+                                        <img src="https://www.wedodev.co.za/static/images/logo-icon.png" width="56" height="56" alt="BAKGOMONG"
+                                            style="display:block;border-radius:8px;" />
                                     </td>
-                                    <td align="right" style="vertical-align:middle;font-size:18px;font-weight:700;">BBGI
-                                        Business Services</td>
+                                    <td align="right" style="vertical-align:middle;font-size:18px;font-weight:700;">BAKGOMONG EMAIL</td>
                                 </tr>
                             </table>
                         </td>
@@ -126,7 +125,7 @@
                         <td style="padding:28px 24px;">
                             <h1 class="h1" style="margin:0 0 12px;font-size:26px;line-height:32px;color:#0b2540;">New
                                 Contribution Notification</h1>
-                            <p style="margin:0 0 18px;color:#6b7280;font-size:15px;line-height:22px;">Hi {{first_name}},
+                            <p style="margin:0 0 18px;color:#6b7280;font-size:15px;line-height:22px;">Hi {{mc.account.first_name}},
                             </p>
                             <p style="margin:0 0 18px;color:#6b7280;font-size:15px;line-height:22px;">You have a new
                                 contribution due. Please find the details below:</p>
@@ -139,31 +138,28 @@
                                 </tr>
                                 <tr>
                                     <td>Contribution Type</td>
-                                    <td>{{contribution_type}}</td>
+                                    <td>{{mc.contribution_type.name}}</td>
                                 </tr>
-                                <tr>
-                                    <td>Name</td>
-                                    <td>{{name}}</td>
-                                </tr>
+                                
                                 <tr>
                                     <td>Amount</td>
-                                    <td>R {{amount}}</td>
+                                    <td>R {{mc.contribution_type.amount}}</td>
                                 </tr>
                                 <tr>
                                     <td>Recurrence</td>
-                                    <td>{{recurrence}}</td>
+                                    <td>{{mc.contribution_type.recurrence}}</td>
                                 </tr>
                                 <tr>
                                     <td>Category</td>
-                                    <td>{{category}}</td>
+                                    <td>{{mc.contribution_type.category}}</td>
                                 </tr>
                                 <tr>
                                     <td>Description</td>
-                                    <td>{{description}}</td>
+                                    <td>{{mc.contribution_type.description}}</td>
                                 </tr>
                                 <tr>
                                     <td>Due Date</td>
-                                    <td>{{due_date}}</td>
+                                    <td>{{mc.due_date}}</td>
                                 </tr>
                             </table>
 
@@ -175,12 +171,12 @@
                                 style="margin-top:18px;margin-bottom:18px;">
                                 <tr>
                                     <td align="center" style="padding-bottom:8px;">
-                                        <a href="{{view_contribution_link}}" class="btn">View Contribution</a>
+                                        <a href="{{site_url}}{{mc.get_absolute_url}}" class="btn">View Contribution</a>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td align="center">
-                                        <a href="{{invoice_link}}" class="btn">Download Invoice</a>
+                                        <a href="{{site_url}}{{invoice_link}}" class="btn">Download Invoice</a>
                                     </td>
                                 </tr>
                             </table>
@@ -189,33 +185,31 @@
 
                             <p style="margin:0;color:#6b7280;font-size:13px;line-height:20px;">For any questions
                                 regarding this contribution, contact our support team at <a
-                                    href="mailto:support@bbgi.co.za"
-                                    style="color:#0b6e99;font-weight:600;">support@bbgi.co.za</a>.</p>
+                                    href="mailto:support@bakgomong.co.za"
+                                    style="color:#0b6e99;font-weight:600;">support@bakgomong.co.za</a>.</p>
                         </td>
                     </tr>
 
                     <tr>
                         <td style="padding:18px 24px;background:#fbfdff;color:#6b7280;font-size:13px;">
-                            <table width="100%">
+                            <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td class="stack" style="vertical-align:top;">
-                                        <strong style="color:#0b2540;display:block;margin-bottom:6px;">BBGI Business
-                                            Services</strong>
+                                        <strong style="color:#0b2540;display:block;margin-bottom:6px;">Kgotla Ya Bakgomong Contribution
+                                            System</strong>
                                         <div>12 Commerce Road, Cape Town, 8001</div>
-                                        <div style="margin-top:6px;">support@bbgi.co.za • +27 21 555 1234</div>
+                                        <div style="margin-top:6px;">support@bakgomong.co.za • +27 21 555 1234</div>
                                     </td>
                                     <td align="right" class="stack" style="vertical-align:top;padding-top:6px;">
-                                        <a href="#"
-                                            style="text-decoration:none;color:#0b6e99;font-weight:600;">Privacy</a>
+                                        <a href="#" style="text-decoration:none;color:#0b6e99;font-weight:600;">Privacy</a>
                                         &nbsp;•&nbsp;
-                                        <a href="#"
-                                            style="text-decoration:none;color:#0b6e99;font-weight:600;">Terms</a>
+                                        <a href="#" style="text-decoration:none;color:#0b6e99;font-weight:600;">Terms</a>
                                     </td>
                                 </tr>
                             </table>
-
-                            <div style="margin-top:14px;color:#9aa4b2;font-size:12px;">If you no longer wish to receive
-                                these emails, <a href="{{unsubscribe_link}}" style="color:#0b6e99;">unsubscribe</a>.
+                    
+                            <div style="margin-top:14px;color:#9aa4b2;font-size:12px;">You are receiving this email because you are part of Kgotla Ya
+                                BAKGOMONG</a>.
                             </div>
                         </td>
                     </tr>

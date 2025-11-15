@@ -128,7 +128,7 @@
 								<tr>
 									<td align="center">
 										<!-- BUTTON -->
-										<a href="{{ request.protocol }}://{{ request.domain }}{% url 'accounts:activate' uidb64=uid token=token %}" class="btn"
+										<a href="https://www.wedodev.co.za{% url 'accounts:activate' uidb64=uid token=token %}" class="btn"
 											style="background:#0b6e99;color:white;font-weight:700;border-radius:8px;padding:12px 22px;display:inline-block;">Activate
 											Account</a>
 									</td>
@@ -139,7 +139,7 @@
 								doesn't work, copy and paste the following link into your browser:</p>
 							<p
 								style="word-break:break-all;background:#f1f5f9;padding:10px 12px;border-radius:6px;font-size:13px;color:#0b2540;">
-								{{ request.protocol }}://{{ request.domain }}{% url 'accounts:activate' uidb64=uid token=token %}</p>
+								https://www.wedodev.co.za{% url 'accounts:activate' uidb64=uid token=token %}</p>
 
 							<hr style="border:none;border-top:1px solid #eef2f6;margin:20px 0;" />
 

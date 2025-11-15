@@ -239,3 +239,11 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'noreply@bakgomong.co.za'
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = 'BAKMGOMONG <noreply@bakgomong.co.za>'
+
+
+SMSPORTAL_AUTH=config('Client_ID')
+TWILIO_SID=config('TWILIO_SID')
+TWILIO_AUTH_TOKEN=config('TWILIO_AUTH_TOKEN')
+TWILIO_FROM='+12067456246'
+
+SITE_URL = "https://www.wedodev.co.za"

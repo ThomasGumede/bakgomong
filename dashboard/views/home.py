@@ -29,7 +29,6 @@ def index(request):
     if user.is_staff or user.role.lower() in ["CLAN CHAIRPERSORN", "FAMILY LEADER"]:
         
         context["total_contributions"] = ContributionType.objects.count()
-
     
         payments = Payment.objects.aggregate(total_paid=Sum("amount"))
         unpaid = MemberContribution.objects.filter(is_paid='NOT PAID').aggregate(total_due=Sum("amount_due"))
