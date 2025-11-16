@@ -27,38 +27,39 @@ def index(request):
     context["total_members"] = Account.objects.count()
     context["total_families"] = Family.objects.count()
     context["family"] = getattr(user, "family", None)
+    member_contribs_qs = MemberContribution.objects.all().order_by("-created")
 
     # Clan-wide aggregates (safe to compute for everyone)
     # Use MemberContribution totals as source of truth
-    clan_paid_agg = MemberContribution.objects.filter(
+    clan_paid_agg =member_contribs_qs.filter(
         is_paid__in=[PaymentStatus.PAID, 'PAID']
     ).aggregate(total_paid=Sum("amount_due"))
     clan_total_paid = clan_paid_agg.get("total_paid") or 0
-    member_contribs_qs = MemberContribution.objects.select_related(
-            "contribution_type"
-        ).filter(account=user).order_by("-created")
+    
 
     # Everyone can see a simple clan balance (paid amount). Detailed unpaid shown only to staff.
     context["clan_total_paid"] = clan_total_paid
     if user.is_staff:
-        clan_unpaid_agg = MemberContribution.objects.filter(
-        ~Q(is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING'])
+        clan_unpaid_agg = member_contribs_qs.filter(
+        is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING']
         )
         clan_total_unpaid = clan_unpaid_agg.aggregate(total_unpaid=Sum("amount_due")).get("total_unpaid") or 0
         context["clan_total_unpaid"] = clan_total_unpaid
         context["clan_total_unpaid_count"] = clan_unpaid_agg.count()
-        context["payments"] = MemberContribution.objects.select_related(
-            "account", "contribution_type", "account__family"
-        ).order_by("-created")[:20]
+        context["payments"] =member_contribs_qs.select_related(
+            "account"
+        ).order_by("-created")[:5]
         
     else:
         # Member view: only personal contributions/payments (MemberContribution)
         
-        context["payments"] = member_contribs_qs[:10]
+        context["payments"] = member_contribs_qs.select_related(
+            "account"
+        ).filter(account=user)[:5]
 
         
-    member_paid_agg = member_contribs_qs.filter(is_paid=PaymentStatus.PAID).aggregate(total=Sum("amount_due"))
-    member_unpaid_agg = member_contribs_qs.filter(is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING'])
+    member_paid_agg = member_contribs_qs.filter(account=user, is_paid=PaymentStatus.PAID).aggregate(total=Sum("amount_due"))
+    member_unpaid_agg = member_contribs_qs.filter(account=user, is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING'])
 
     context["member_total_paid"] = member_paid_agg.get("total") or 0
     context["member_total_unpaid"] = member_unpaid_agg.aggregate(total=Sum("amount_due")).get("total") or 0

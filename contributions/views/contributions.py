@@ -38,29 +38,28 @@ def get_contribution(request, contribution_slug):
     payments = None
     outstandings = None
     
+    mcs = MemberContribution.objects.filter(contribution_type=contribution)
+    pms = Payment.objects.filter(contribution_type=contribution)
+    
+    
     # Display based on roles
     if is_treasurer_or_admin(user):
         payments = (
-            Payment.objects
-            .filter(contribution_type=contribution)
-            .select_related("account", "account__family", "recorded_by")
+            pms.select_related("account", "recorded_by")
             .order_by("-payment_date")
         )
-        outstandings = MemberContribution.objects.filter(
-        contribution_type=contribution,
+        outstandings = mcs.filter(
         is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING']
-        ).select_related("account", "account__family")
+        ).select_related("account")
     else:
         payments = (
-            Payment.objects
-            .filter(contribution_type=contribution, account=user)
-            .select_related("account", "account__family", "recorded_by")
+            pms.filter(account=user)
+            .select_related("account", "recorded_by")
             .order_by("-payment_date")
         )
-        outstandings = MemberContribution.objects.filter(
-        contribution_type=contribution,
+        outstandings = mcs.filter(
         is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING'], account=user
-        ).select_related("account", "account__family")
+        ).select_related("account")
 
     
 
@@ -68,22 +67,15 @@ def get_contribution(request, contribution_slug):
     
     # Aggregate totals (single query)
     unpaid_amount = outstandings.aggregate(total=Sum('amount_due'))['total'] or 0
-    total_collected = payments.aggregate(total=Sum("amount"))["total"] or 0
+    total_collected = pms.aggregate(total=Sum("amount"))["total"] or 0
+    total_collected_m = pms.filter(account=user).aggregate(total=Sum("amount"))["total"] or 0
     outstanding_count = outstandings.count()
-
-    # Group totals by family (optimized single query)
-    totals_by_family = (
-        payments
-        .values("account__family__name", "account__family__id")
-        .annotate(total=Sum("amount"), count=Count("id"))
-        .order_by("-total")
-    )
 
     context = {
         "contribution": contribution,
         "payments": payments,
         "total_collected": total_collected,
-        "totals_by_family": totals_by_family,
+        "total_collected_m": total_collected_m,
         "unpaid_amount": unpaid_amount,
         "outstanding_count": outstanding_count,
         "outstandings": outstandings,  # Show first 20 outstanding

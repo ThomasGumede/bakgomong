@@ -25,7 +25,7 @@ Clan Contributions
                                 <th scope="col">Title</th>
                                 <th scope="col">amount</th>
                                 <th scope="col">recurrence</th>
-                                <th scope="col">Contributed Amount</th>
+                                
                                 <th scope="col">Created By</th>
                                 <th scope="col">Created Date</th>
                                 <th scope="col" class="text-center">Action</th>
@@ -38,8 +38,8 @@ Clan Contributions
                                 
                                 <td><a href="{{contr.get_absolute_url}}" class="hover:text-red-500 hover:font-bold">{{contr.name}}</a></td>
                                 <td>R{{contr.amount}}</td>
-                                <td>{{contr.recurrence}}</td>
-                                <td>R{{contr.total_collected}}</td>
+                                <td>{{contr.get_recurrence_display}}</td>
+
                                 <td>
                                     <div class="flex items-center">
                                         <img src="{% if contr.created_by.profile_image %}{{contr.created_by.profile_image.url}}{% else %}{% static 'dashboard/images/user-grid/user-grid-img13.png' %}{% endif %}"
@@ -69,7 +69,7 @@ Clan Contributions
                                             <iconify-icon icon="lucide:edit" class="menu-icon"></iconify-icon>
                                         </a>
                                         <span data-modal-target="delete-popup-modal-{{contr.slug}}" data-modal-toggle="delete-popup-modal-{{contr.slug}}" type="button"
-                                            class="remove-item-btn bg-danger-100 dark:bg-danger-600/25 hover:bg-danger-200 text-danger-600 dark:text-danger-500 font-medium w-10 h-10 flex justify-center items-center rounded-full">
+                                            class="remove-item-btn cursor-pointer bg-danger-100 dark:bg-danger-600/25 hover:bg-danger-200 text-danger-600 dark:text-danger-500 font-medium w-10 h-10 flex justify-center items-center rounded-full">
                                             <iconify-icon icon="fluent:delete-24-regular"
                                                 class="menu-icon"></iconify-icon>
                                         </span>
@@ -98,7 +98,7 @@ Clan Contributions
                 <iconify-icon icon="fluent:delete-24-regular" class="menu-icon"></iconify-icon>
             </span>
             <h6 class="text-lg font-semibold text-neutral-600 dark:text-neutral-200 mb-0">Are your sure you want to
-                delete this Contribution (contribution.name)</h6>
+                delete this Contribution ({{contribution.name}})?</h6>
             <div class="flex items-center justify-center gap-3 mt-6">
                 <button type="reset" data-modal-hide="delete-popup-modal-{{contribution.slug}}"
                     class="w-1/2 border border-danger-600 hover:bg-danger-100 text-danger-600 text-base px-10 py-[11px] rounded-lg">

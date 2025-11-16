@@ -44,7 +44,7 @@ Home
                             <img src="{% static 'images/home-eleven/icons/home-eleven-icon2.svg' %}" alt="">
                         </span>
                         <div>
-                            <span class="font-medium text-neutral-600 text-base">Outstanding Balance</span>
+                            <span class="font-medium text-neutral-600 text-base">Kgotla Outstanding Balance</span>
                             <h6 class="font-semibold mt-[2px]">R{{clan_total_unpaid}}</h6>
                         </div>
                     </div>
@@ -92,7 +92,7 @@ Home
                             <img src="{% static 'images/home-eleven/icons/home-eleven-icon2.svg' %}" alt="">
                         </span>
                         <div>
-                            <span class="font-medium text-neutral-600 text-base">Outstanding Balance</span>
+                            <span class="font-medium text-neutral-600 text-base">Your Outstanding Balance</span>
                             <h6 class="font-semibold mt-[2px]">R{{member_total_unpaid}}</h6>
                         </div>
                     </div>
@@ -185,7 +185,7 @@ Home
     <div class="card-header">
         <div class="flex items-center flex-wrap gap-2 justify-between">
             <h6 class="font-bold text-lg mb-0">Payment History</h6>
-            <a href="{% if request.user.is_staff %}{% else %}{% endif %}"
+            <a href="{% url 'contributions:member-contributions-list' %}"
                 class="text-primary-600 dark:text-primary-600 hover-text-primary flex items-center gap-1">
                 View All
                 <iconify-icon icon="solar:alt-arrow-right-linear" class="icon"></iconify-icon>
@@ -195,7 +195,7 @@ Home
     <div class="card-body">
         <div class="overflow-x-auto">
             <div class="w-[100px]">
-                <table class="table bordered-table sm-table mb-0">
+                <table id="selection-table" class="table bordered-table sm-table mb-0">
                     <thead>
                         <tr>
                     
@@ -268,6 +268,7 @@ Home
 
 
 {% block scripts %}
-   
+
+
 {% endblock scripts %}
     

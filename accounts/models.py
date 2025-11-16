@@ -61,6 +61,9 @@ class Family(AbstractCreate):
     def get_absolute_url(self):
         return reverse("accounts:get-family", kwargs={"family_slug": self.slug})
     
+    def get_delete_url(self):
+        return reverse("accounts:delete-family", kwargs={"family_slug": self.slug})
+    
     def clean(self):
         from django.core.exceptions import ValidationError
 
