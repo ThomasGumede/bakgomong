@@ -1,5 +1,5 @@
 from django.urls import path
-from .views.checkout import checkout
+from .views.checkout import checkout, log_payment
 from contributions.views.member_contr import add_member_contribution, my_member_contributions_list, member_contribution, delete_member_contribution, member_contributions_list, update_member_contribution
 from .views.contributions import get_contribution, get_contributions, add_contribution, update_contribution, delete_contribution
 
@@ -20,4 +20,5 @@ urlpatterns = [
     path('member-invoices/<uuid:id>/delete/', delete_member_contribution, name='delete-member-contribution'),
     
     path('payment/checkout/<uuid:id>', checkout, name='checkout'),
+    path('payment/log-payment/<uuid:id>', log_payment, name='log-payment'),
 ]

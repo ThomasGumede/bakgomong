@@ -6,7 +6,7 @@ from django.db import transaction
 from django.urls import reverse
 from django_q.tasks import async_task
 from django.conf import settings
-from contributions.forms import PaymentCheckoutForm
+from contributions.forms import LogPaymentForm, PaymentCheckoutForm
 from ..models import ContributionType, MemberContribution, Payment
 from accounts.utils.abstracts import PaymentStatus, Role
 
@@ -40,6 +40,8 @@ def checkout(request, id):
                     payment.account = user
                     payment.recorded_by = request.user
                     payment.payment_method_type = payment_method
+                    payment.is_approved = Payment.LogPaymentStatus.PENDING
+                    payment.reference = member_contribution.reference
                     payment.save()
                     # update member contribution status (also atomic via Payment.save)
                     payment.update_member_contribution_status(PaymentStatus.PENDING)
@@ -181,6 +183,8 @@ def yoco_callback(request):
         return render(request, "payments/yoco-callback-error.html", {"error": "An error occurred"}, status=500)
 
 
+from ..forms import LogPaymentForm
+
 @login_required
 def log_payment(request, id):
     """
@@ -196,30 +200,25 @@ def log_payment(request, id):
     contribution_type = member_contribution.contribution_type
 
     if request.method == "POST":
-        form = PaymentCheckoutForm(request.POST, user=member_contribution.account)
+        form = LogPaymentForm(request.POST, request.FILES, treasurer=request.user)
         if form.is_valid():
-            payment_method = request.POST.get("payment_method", "cash").strip().lower()
-            reference = request.POST.get("reference", "").strip()
-
             try:
                 with transaction.atomic():
                     payment = form.save(commit=False)
                     payment.account = member_contribution.account
                     payment.recorded_by = request.user  # treasurer who logged it
-                    payment.payment_method_type = payment_method
+                    payment.member_contribution = member_contribution
+                    payment.reference = member_contribution.reference
+                    payment.is_approved = Payment.LogPaymentStatus.PENDING  # Require approval
                     payment.save()
 
-                    # Immediately mark contribution as PAID (treasurer has confirmed receipt)
-                    member_contribution.is_paid = PaymentStatus.PAID
-                    member_contribution.save()
-
-                logger.info(
-                    "Payment logged by treasurer %s for %s: R%.2f (%s)",
-                    request.user.username,
-                    member_contribution.account.username,
-                    member_contribution.amount_due,
-                    payment_method,
-                )
+                    logger.info(
+                        "Payment logged by treasurer %s for %s: R%.2f (%s)",
+                        request.user.username,
+                        member_contribution.account.username,
+                        member_contribution.amount_due,
+                        payment.payment_method,
+                    )
 
                 # Queue confirmation email to member (non-blocking)
                 async_task(
@@ -231,7 +230,7 @@ def log_payment(request, id):
                 messages.success(
                     request,
                     f"Payment of R{member_contribution.amount_due:.2f} for {contribution_type.name} "
-                    f"has been recorded and confirmed. Confirmation email sent to {member_contribution.account.email}."
+                    f"has been recorded. Awaiting approval. Confirmation email sent to {member_contribution.account.email}."
                 )
                 return redirect("contributions:member-contribution", id=member_contribution.id)
 
@@ -239,14 +238,15 @@ def log_payment(request, id):
                 logger.exception("Failed to log payment for contribution %s", id)
                 messages.error(request, "An error occurred while logging payment. Please try again.")
         else:
-            logger.warning("PaymentCheckoutForm validation failed in log_payment for %s", id)
+            logger.warning("LogPaymentForm validation failed: %s", form.errors)
             messages.error(request, "Please fix the errors below.")
 
     else:
-        form = PaymentCheckoutForm(user=member_contribution.account, initial={
+        form = LogPaymentForm(treasurer=request.user, initial={
             "contribution_type": contribution_type,
             "member_contribution": member_contribution,
             "amount": member_contribution.amount_due,
+            "reference": member_contribution.reference
         })
 
     context = {

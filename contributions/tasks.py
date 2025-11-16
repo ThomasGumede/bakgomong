@@ -4,10 +4,10 @@ from django.utils import timezone
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMultiAlternatives
 from django_q.tasks import async_task
 
-from contributions.models import MemberContribution
+from contributions.models import MemberContribution, Payment
 from contributions.utils.sms import send_sms_via_smsportal, send_sms_via_twilio
 from accounts.utils.abstracts import PaymentStatus
 import logging
@@ -48,7 +48,7 @@ def send_contribution_created_notification_task(member_contribution_id):
         text_content = strip_tags(html_content)
 
         from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
-        msg = EmailMessage(
+        msg = EmailMultiAlternatives(
             subject=f"New Contribution: {contribution.name}",
             body=text_content,
             from_email=from_email,
@@ -142,7 +142,7 @@ def send_payment_reminder():
                 text_content = strip_tags(html_content)
 
                 from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
-                msg = EmailMessage(
+                msg = EmailMultiAlternatives(
                     subject=f"{subject_prefix}: {contribution.name}",
                     body=text_content,
                     from_email=from_email,
@@ -188,7 +188,7 @@ def send_payment_confirmation_task(member_contribution_id, treasurer_name):
         text_content = strip_tags(html_content)
 
         from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
-        msg = EmailMessage(
+        msg = EmailMultiAlternatives(
             subject=f"✓ Payment Confirmed: {mc.contribution_type.name}",
             body=text_content,
             from_email=from_email,
@@ -200,4 +200,36 @@ def send_payment_confirmation_task(member_contribution_id, treasurer_name):
         return True
     except Exception:
         logger.exception("Failed to send payment confirmation for %s", member_contribution_id)
+        return False
+
+
+def send_payment_details_task(obj_id, obj_type='contribution', treasurer_name=None):
+    """
+    Backwards-compatible wrapper for legacy django-q tasks that referenced
+    `contributions.tasks.send_payment_details_task`.
+
+    - obj_type='payment' expects a Payment id and will resolve its related
+      MemberContribution before sending the confirmation.
+    - obj_type='contribution' (default) treats obj_id as a MemberContribution id.
+
+    Returns True on success, False otherwise.
+    """
+    try:
+        logger.info("send_payment_details_task called: id=%s type=%s", obj_id, obj_type)
+        if obj_type == 'payment':
+            payment = Payment.objects.select_related('member_contribution', 'recorded_by').filter(id=obj_id).first()
+            if not payment:
+                logger.error("Payment %s not found", obj_id)
+                return False
+            mc = payment.member_contribution
+            treasurer = treasurer_name or (payment.recorded_by.get_full_name() if payment.recorded_by else None)
+            if not mc:
+                logger.warning("Payment %s has no linked MemberContribution", obj_id)
+                return False
+            return send_payment_confirmation_task(mc.id, treasurer)
+        else:
+            # treat as MemberContribution id
+            return send_payment_confirmation_task(obj_id, treasurer_name)
+    except Exception as exc:
+        logger.exception("send_payment_details_task failed for %s: %s", obj_id, exc)
         return False

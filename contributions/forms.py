@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal, InvalidOperation
 from django import forms
 from django.core.exceptions import ValidationError
@@ -6,6 +7,8 @@ from django.db.models import Sum
 from .models import ContributionType, MemberContribution, Payment
 from django.contrib.auth import get_user_model
 from accounts.utils.abstracts import PaymentStatus
+
+logger = logging.getLogger("contributions.forms")
 
 class MemberContributionForm(forms.ModelForm):
     class Meta:
@@ -60,7 +63,11 @@ class ContributionTypeForm(forms.ModelForm):
                 self.initial[field_name] = ''
 
 
+
+
+
 class PaymentCheckoutForm(forms.ModelForm):
+    """Form for members to pay online (checkout)."""
 
     class Meta:
         model = Payment
@@ -86,19 +93,22 @@ class PaymentCheckoutForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop("user", None)
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
         # Filter active contribution types
-        self.fields['contribution_type'].queryset = ContributionType.objects.all().order_by('name')
+        self.fields['contribution_type'].queryset = (
+            ContributionType.objects.filter(is_active=True).order_by('name')
+        )
 
-        # Limit member_contribution to current user
-        if user:
-            self.fields['member_contribution'].queryset = MemberContribution.objects.filter(
-                account=user, is_paid=PaymentStatus.NOT_PAID
+        if self.user:
+            # Use single PaymentStatus value (not list)
+            mc_qs = MemberContribution.objects.filter(
+                account=self.user,
+                is_paid='NOT PAID'
             ).select_related('contribution_type')
+            self.fields['member_contribution'].queryset = mc_qs
         else:
-            # don't expose other users' contributions in the checkout
             self.fields['member_contribution'].queryset = MemberContribution.objects.none()
 
     def clean(self):
@@ -108,31 +118,168 @@ class PaymentCheckoutForm(forms.ModelForm):
         amount = cleaned_data.get("amount")
 
         if member_contribution and contribution_type:
-            # Ensure the selected contribution matches the member_contribution type
+            # Match contribution type
             if member_contribution.contribution_type != contribution_type:
-                raise ValidationError(_("The selected member contribution does not match the contribution type."))
+                raise ValidationError(
+                    _("The selected member contribution does not match the contribution type.")
+                )
 
-            # Ensure amount is a valid Decimal and positive
+            # Amount validation
             try:
                 amt = Decimal(amount)
             except (InvalidOperation, TypeError):
                 raise ValidationError(_("Enter a valid payment amount."))
+
             if amt <= 0:
                 raise ValidationError(_("Payment amount must be greater than zero."))
 
             outstanding = Decimal(member_contribution.amount_due)
-            # By default require exact payment to clear the contribution. If you support partials,
-            # change this check to allow amt <= outstanding.
+
+            # Exact match required
             if amt != outstanding:
                 raise ValidationError(
-                    _(f"Payment amount must equal outstanding balance: R{outstanding:.2f}.")
+                    _("Payment amount must equal outstanding balance: R%(amount)s.") 
+                    % {"amount": f"{outstanding:.2f}"}
                 )
 
-            # Ensure the member contribution belongs to the current user (extra safety)
-            request_user = getattr(self, "_current_user", None)
-            # some callers set form._current_user after instantiation; if not available, skip strict check
-            if request_user and member_contribution.account != request_user:
+            # Ensure user pays only their own contributions
+            if self.user and member_contribution.account != self.user:
                 raise ValidationError(_("You cannot pay for another member's contribution."))
 
         return cleaned_data
 
+
+class LogPaymentForm(forms.ModelForm):
+    """Form for treasurer to manually log/record a payment with proof."""
+
+    class Meta:
+        model = Payment
+        fields = (
+            'member_contribution',
+            'amount',
+            'payment_method',
+            'reference',
+            'receipt',
+            'proof_of_payment',
+            'contribution_type'
+        )
+
+        widgets = {
+            'member_contribution': forms.Select(attrs={
+                "class": "form-control rounded-lg form-select",
+                "placeholder": "Select Member Contribution",
+                "required": True
+            }),
+            'contribution_type': forms.Select(attrs={
+                "class": "form-control rounded-lg form-select",
+                "placeholder": "Select Contribution Type",
+                "help_text": "Select Contribution Type"
+            }),
+           
+            'amount': forms.NumberInput(attrs={
+                "class": "form-control",
+                "placeholder": "e.g. R500.00",
+                "step": "0.01",
+                "required": True
+            }),
+            'payment_method': forms.Select(attrs={
+                "class": "form-control rounded-lg form-select",
+                "required": True
+            }),
+            'reference': forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "e.g. Bank ref, invoice #, transaction ID",
+                "help_text": "Transaction/reference number for tracking"
+            }),
+            'receipt': forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "e.g. Receipt number from bank",
+                "help_text": "Receipt number from payment provider"
+            }),
+            'proof_of_payment': forms.FileInput(attrs={
+                "class": "form-control",
+                "accept": ".pdf,.jpg,.jpeg,.png,.gif",
+                "required": True,
+                "help_text": "Upload bank statement, screenshot, or receipt (PDF, JPG, PNG)"
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.treasurer = kwargs.pop("treasurer", None)  # User logging the payment
+        super().__init__(*args, **kwargs)
+
+        # Show only unpaid contributions
+        self.fields['member_contribution'].queryset = (
+            MemberContribution.objects
+            .filter(is_paid='NOT PAID')
+            .select_related('account', 'contribution_type')
+            .order_by('-created')
+        )
+
+        # Set help texts
+        self.fields['member_contribution'].help_text = "Select the member contribution to log payment for"
+        self.fields['amount'].help_text = "Must match the outstanding amount"
+        self.fields['payment_method'].help_text = "How was payment received?"
+
+        # Make proof_of_payment required
+        self.fields['proof_of_payment'].required = True
+        self.fields['reference'].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        member_contribution = cleaned_data.get("member_contribution")
+        amount = cleaned_data.get("amount")
+        proof_of_payment = cleaned_data.get("proof_of_payment")
+        payment_method = cleaned_data.get("payment_method")
+
+        # Validate member contribution exists
+        if not member_contribution:
+            raise ValidationError(_("Please select a member contribution."))
+
+        # Validate amount
+        try:
+            amt = Decimal(amount) if amount else Decimal(0)
+        except (InvalidOperation, TypeError):
+            raise ValidationError(_("Enter a valid payment amount."))
+
+        if amt <= 0:
+            raise ValidationError(_("Payment amount must be greater than zero."))
+
+        outstanding = Decimal(member_contribution.amount_due)
+
+        # Exact match required (treasurer must verify amount)
+        if amt != outstanding:
+            raise ValidationError(
+                _("Payment amount must equal outstanding balance: R%(amount)s.") 
+                % {"amount": f"{outstanding:.2f}"}
+            )
+
+        # Proof of payment is required
+        if not proof_of_payment:
+            raise ValidationError(_("Proof of payment (receipt/statement) is required."))
+
+        # Validate file type
+        allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif']
+        if proof_of_payment.content_type not in allowed_types:
+            raise ValidationError(
+                _("Invalid file type. Accepted: PDF, JPG, PNG, GIF")
+            )
+
+        # Validate file size (max 5MB)
+        if proof_of_payment.size > 5 * 1024 * 1024:
+            raise ValidationError(
+                _("File size exceeds 5MB limit.")
+            )
+
+        # Payment method must be selected
+        if not payment_method:
+            raise ValidationError(_("Please select a payment method."))
+
+        logger.info(
+            "LogPaymentForm validation: member_contribution=%s, amount=R%s, method=%s",
+            member_contribution.reference,
+            amt,
+            payment_method
+        )
+
+        return cleaned_data

@@ -80,6 +80,7 @@ class ContributionType(AbstractCreate):
         null=True,
         related_name="created_contributions",
     )
+    is_active = models.BooleanField(default=True)
     
 
     class Meta:
@@ -164,54 +165,176 @@ class MemberContribution(AbstractCreate):
 
 
 class Payment(AbstractCreate, AbstractPayment):
-    
-    
-    
-    
-    checkout_id = models.CharField(max_length=200, unique=True, null=True, blank=True, db_index=True)
-    
-    account = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="payments")
-    contribution_type = models.ForeignKey(ContributionType, on_delete=models.SET_NULL, null=True, related_name="payments")
-    member_contribution = models.ForeignKey(MemberContribution, on_delete=models.SET_NULL, null=True, blank=True, related_name="payments")
-    payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.CASH)
+    class LogPaymentStatus(models.TextChoices):
+        PENDING = "PENDING", _("Pending Verification")
+        APPROVED = "APPROVED", _("Approved")
+        REJECTED = "REJECTED", _("Rejected")
+        
+    checkout_id = models.CharField(
+        max_length=200,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True
+    )
+    account = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name="payments"
+    )
+    contribution_type = models.ForeignKey(
+        ContributionType,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="payments"
+    )
+    member_contribution = models.ForeignKey(
+        MemberContribution,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments"
+    )
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.CASH
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    reference = models.CharField(max_length=100, blank=True, null=True, help_text=_("Receipt or transaction reference"))
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=_("Receipt or transaction reference")
+    )
+    receipt = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=_("Receipt number from bank/payment provider")
+    )
+    proof_of_payment = models.FileField(
+        upload_to="payments/proof/",
+        blank=True,
+        null=True,
+        help_text=_("Upload bank statement, screenshot, or receipt image")
+    )
     payment_date = models.DateField(auto_now_add=True)
-    recorded_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, related_name="recorded_payments")
-    
+    recorded_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="recorded_payments",
+        help_text=_("Treasurer or admin who logged this payment")
+    )
+    is_approved = models.CharField(
+        max_length=20,
+        choices=LogPaymentStatus.choices,
+        default=LogPaymentStatus.PENDING,
+        help_text=_("Payment verification status"),
+        db_index=True
+    )
+    payment_verified_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_payments",
+        help_text=_("Admin/treasurer who verified/approved payment")
+    )
+    payment_verified_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_("When payment was verified")
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text=_("Reason if payment was rejected")
+    )
 
     class Meta:
         verbose_name = _("Payment")
         verbose_name_plural = _("Payments")
         ordering = ["-payment_date"]
+        indexes = [
+            models.Index(fields=["account", "-payment_date"]),
+            models.Index(fields=["is_approved", "payment_date"]),
+        ]
 
     def __str__(self):
-        return f"{self.account.get_full_name()} - {self.amount} "
+        return f"{self.account.get_full_name()} - R{self.amount} ({self.get_is_approved_display()})"
+
+    def get_absolute_url(self):
+        return reverse("admin:contributions_payment_change", args=[self.id])
+
+    def approve_payment(self, approved_by, rejection_reason=None):
+        """Approve or reject payment."""
+        from django.utils import timezone
+        from accounts.utils.abstracts import PaymentStatus as ContribPaymentStatus
+
+        if rejection_reason:
+            self.is_approved = self.LogPaymentStatus.REJECTED
+            self.rejection_reason = rejection_reason
+        else:
+            self.is_approved = self.LogPaymentStatus.APPROVED
+            self.rejection_reason = None
+
+        self.payment_verified_by = approved_by
+        self.payment_verified_date = timezone.now()
+        self.save()
+
+        # Update member contribution status if approved
+        if self.is_approved == self.LogPaymentStatus.APPROVED and self.member_contribution:
+            self.update_member_contribution_status(ContribPaymentStatus.PAID)
 
     def update_member_contribution_status(self, status):
-        
-        """Automatically update member contribution payment status."""
-        if not self.member_contribution:
-            return
+         """Automatically update member contribution payment status."""
+         if not self.member_contribution:
+             return
 
-        self.member_contribution.is_paid = status
-        self.member_contribution.save()
-    
+         self.member_contribution.is_paid = status
+         self.member_contribution.save(update_fields=['is_paid'])
+
     def save(self, *args, **kwargs):
-        from accounts.utils.abstracts import PaymentStatus
+        import logging
+        from accounts.utils.abstracts import PaymentStatus as ContribPaymentStatus
+        logger = logging.getLogger("contributions")
+
+        # Validate proof_of_payment if logged by treasurer
+        if self.recorded_by and not self.pk:  # New payment being created
+            if self.recorded_by.role == "TREASURER" and not self.proof_of_payment:
+                raise ValueError("Proof of payment is required when treasurer logs a payment.")
+
         # save payment and then atomically update related member_contribution status
         with transaction.atomic():
             super().save(*args, **kwargs)
             if self.member_contribution:
                 # recalc total paid for the member contribution
-                total_paid = self.member_contribution.payments.aggregate(total=Sum("amount")).get("total") or 0
+                total_paid = (
+                    self.member_contribution.payments
+                    .filter(is_approved=self.LogPaymentStatus.APPROVED)
+                    .aggregate(total=Sum("amount"))
+                    .get("total") or 0
+                )
                 if total_paid >= self.member_contribution.amount_due:
-                    new_status = PaymentStatus.PAID
+                    new_status = ContribPaymentStatus.PAID
                 else:
-                    new_status = PaymentStatus.PARTIALLY_PAID if total_paid > 0 else PaymentStatus.NOT_PAID
+                    new_status = (
+                        ContribPaymentStatus.PARTIALLY_PAID
+                        if total_paid > 0
+                        else ContribPaymentStatus.NOT_PAID
+                    )
                 # only save when status changes
                 if self.member_contribution.is_paid != new_status:
                     self.member_contribution.is_paid = new_status
                     self.member_contribution.save()
+
+                logger.info(
+                    "Payment %s saved; member contribution %s status: %s",
+                    self.id,
+                    self.member_contribution.id,
+                    new_status
+                )
 
 

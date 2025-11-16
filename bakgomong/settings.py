@@ -226,7 +226,9 @@ TINYMCE_DEFAULT_CONFIG = {
 AUTH_USER_MODEL = 'accounts.Account'
 AUTHENTICATION_BACKENDS = ['accounts.utils.backends.EmailBackend']
 LOGIN_URL = 'accounts:login'
-ADMINS = [('admin@bakgomong.co.za'),( 'support@bakgomong.co.za'), ('gumedethomas12@gmail.com') ]
+ADMINS = [
+    ("Site Admin", "admin@bakgomong.co.za"),
+]
 MANAGERS = [('admin@bakgomong.co.za'), ('support@bakgomong.co.za'), ('gumedethomas12@gmail.com') ]
 
 # Email
@@ -239,6 +241,7 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'noreply@bakgomong.co.za'
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = 'BAKMGOMONG <noreply@bakgomong.co.za>'
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 
 SMSPORTAL_AUTH=config('Client_ID')
