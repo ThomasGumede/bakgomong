@@ -34,7 +34,9 @@ def index(request):
         is_paid__in=[PaymentStatus.PAID, 'PAID']
     ).aggregate(total_paid=Sum("amount_due"))
     clan_total_paid = clan_paid_agg.get("total_paid") or 0
-    
+    member_contribs_qs = MemberContribution.objects.select_related(
+            "contribution_type"
+        ).filter(account=user).order_by("-created")
 
     # Everyone can see a simple clan balance (paid amount). Detailed unpaid shown only to staff.
     context["clan_total_paid"] = clan_total_paid
@@ -51,9 +53,7 @@ def index(request):
         
     else:
         # Member view: only personal contributions/payments (MemberContribution)
-        member_contribs_qs = MemberContribution.objects.select_related(
-            "contribution_type"
-        ).filter(account=user).order_by("-created")
+        
         context["payments"] = member_contribs_qs[:10]
 
         
