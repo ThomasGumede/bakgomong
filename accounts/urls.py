@@ -38,6 +38,7 @@ urlpatterns = [
     
     path('dashboard/families', get_families, name="get-families"),
     path('dashboard/add-family', add_family, name="add-family"),
+    path('dashboard/family/', get_family, name="no-slug-get-family"),
     path('dashboard/family/<family_slug>', get_family, name="get-family"),
     path('dashboard/update-family/<family_slug>', update_family, name="update-family"),
     path('dashboard/delete-family/<family_slug>', delete_family, name="delete-family"),

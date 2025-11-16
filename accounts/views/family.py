@@ -26,14 +26,18 @@ def get_families(request):
 
 
 @login_required
-def get_family(request, family_slug):
+def get_family(request, family_slug=None):
     """
     Show a family's profile, members, total contributions, unpaid balances, and uploaded documents.
     """
     user  = request.user
+    if not family_slug:
+        family_slug = user.family.slug
+    
     # Ensure only approved families are viewable
     if user.role == Role.MEMBER and not user.is_staff:
         families = Family.objects.filter(is_approved=True, id=user.family.id)
+        
         family = get_object_or_404(families, slug=family_slug)
         contributions = (
             MemberContribution.objects.filter(account__family=family, account=user)
