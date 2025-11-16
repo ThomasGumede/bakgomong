@@ -2,97 +2,202 @@ from celery import shared_task
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
-from contributions.utils.sms import send_sms_via_smsportal, send_sms_via_twilio, send_email_notification
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.core.mail import EmailMessage
+from django_q.tasks import async_task
+
 from contributions.models import MemberContribution
+from contributions.utils.sms import send_sms_via_smsportal, send_sms_via_twilio
+from accounts.utils.abstracts import PaymentStatus
 import logging
 
 logger = logging.getLogger('tasks')
 
 
-@shared_task
-def send_contribution_created_notification(member_contribution_id):
+
+def send_contribution_created_notification_task(member_contribution_id):
     """
     Notify member immediately when a new MemberContribution is created.
     """
     try:
         mc = MemberContribution.objects.get(id=member_contribution_id)
     except MemberContribution.DoesNotExist:
-        return
+        logger.error("MemberContribution %s not found", member_contribution_id)
+        return False
 
     contribution = mc.contribution_type
     member = mc.account
 
-    payment_url = f"{settings.SITE_URL}/payments/{mc.id}/pay/"
+    if not member or not member.email:
+        logger.warning("Member %s has no email; skipping notification", member_contribution_id)
+        return False
 
-    message = (
-        f"New Contribution Assigned:\n"
-        f"{contribution.name}\n"
-        f"Amount: R{contribution.amount}\n"
-        f"Due: {mc.due_date}\n"
-        f"Pay here: {payment_url}"
-    )
+    payment_url = f"{settings.SITE_URL}/contributions/{mc.id}/pay/"
+ 
+    try:
+        context = {
+            "user": member.get_full_name() or member.username,
+            "contribution_name": contribution.name,
+            "amount": mc.amount_due,
+            "due_date": mc.due_date,
+            "reference": mc.reference,
+            "payment_url": payment_url,
+        }
+        html_content = render_to_string("emails/contribution-notification.html", context)
+        text_content = strip_tags(html_content)
 
-    # Send SMS
-    # if member.phone:
-    #     send_sms_via_smsportal(member.phone, message)
-    #     send_sms_via_twilio(member.phone, message)
-
-    # Email
-    if member.email:
-        send_email_notification(
-            settings.SITE_URL,
-            mc
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
+        msg = EmailMessage(
+            subject=f"New Contribution: {contribution.name}",
+            body=text_content,
+            from_email=from_email,
+            to=[member.email],
         )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+        logger.info("Contribution notification sent to %s for %s", member.email, mc.id)
+        return True
+    except Exception:
+        logger.exception("Failed to send contribution notification for %s", member_contribution_id)
+        return False
 
 
-@shared_task
+
 def send_payment_reminder():
     """
     Daily task: Remind members 10 days before + on due date + 10 days after.
+    Queue SMS + email reminders asynchronously.
     """
     today = timezone.now().date()
 
     # 10 days before deadline
     upcoming = MemberContribution.objects.filter(
         due_date=today + timedelta(days=10),
-        is_paid=False
-    )
+        is_paid=PaymentStatus.NOT_PAID
+    ).select_related("account", "contribution_type")
 
     # On the due date
     due_today = MemberContribution.objects.filter(
         due_date=today,
-        is_paid=False
-    )
+        is_paid=PaymentStatus.NOT_PAID
+    ).select_related("account", "contribution_type")
 
-    # 10 days after overdue
+    # 10 days overdue
     overdue = MemberContribution.objects.filter(
         due_date=today - timedelta(days=10),
-        is_paid=False
-    )
+        is_paid=PaymentStatus.NOT_PAID
+    ).select_related("account", "contribution_type")
 
-    for mc in list(upcoming) + list(due_today) + list(overdue):
+    reminder_list = list(upcoming) + list(due_today) + list(overdue)
+
+    for mc in reminder_list:
         contribution = mc.contribution_type
-        member = mc.member
+        member = mc.account
 
-        payment_url = f"{settings.SITE_URL}/payments/{mc.id}/pay/"
+        if not member:
+            logger.warning("MemberContribution %s has no associated member", mc.id)
+            continue
 
-        message = (
-            f"Payment Reminder:\n"
-            f"Contribution: {contribution.name}\n"
-            f"Amount: R{contribution.amount}\n"
-            f"Due: {mc.due_date}\n"
-            f"Pay here: {payment_url}"
-        )
+        payment_url = f"{settings.SITE_URL}/contributions/{mc.id}/pay/"
 
-        # SMS
+        # Determine reminder type
+        if mc.due_date == today + timedelta(days=10):
+            subject_prefix = "⏰ Upcoming Payment Due"
+            reminder_type = "upcoming"
+        elif mc.due_date == today:
+            subject_prefix = "📌 Payment Due Today"
+            reminder_type = "due_today"
+        else:
+            subject_prefix = "⚠️ Payment Overdue"
+            reminder_type = "overdue"
+
+        # Send SMS if phone exists
         if member.phone:
-            send_sms_via_smsportal(member.phone, message)
-            send_sms_via_twilio(member.phone, message)
-
-        # Email
-        if member.email:
-            send_email_notification(
-                to=member.email,
-                subject="Contribution Payment Reminder",
-                message=message
+            sms_message = (
+                f"Reminder: {contribution.name}\n"
+                f"Amount: R{mc.amount_due:.2f}\n"
+                f"Due: {mc.due_date}\n"
+                f"Pay: {payment_url}"
             )
+            try:
+                send_sms_via_smsportal(member.phone, sms_message)
+                logger.info("SMS reminder sent to %s for %s", member.phone, mc.id)
+            except Exception:
+                logger.exception("Failed to send SMS reminder to %s", member.phone)
+
+        # Send email
+        if member.email:
+            try:
+                context = {
+                    "user": member.get_full_name() or member.username,
+                    "contribution_name": contribution.name,
+                    "amount": mc.amount_due,
+                    "due_date": mc.due_date,
+                    "reference": mc.reference,
+                    "payment_url": payment_url,
+                    "reminder_type": reminder_type,
+                }
+                html_content = render_to_string("emails/payment-reminder.html", context)
+                text_content = strip_tags(html_content)
+
+                from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
+                msg = EmailMessage(
+                    subject=f"{subject_prefix}: {contribution.name}",
+                    body=text_content,
+                    from_email=from_email,
+                    to=[member.email],
+                )
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
+                logger.info("Payment reminder sent to %s for %s", member.email, mc.id)
+            except Exception:
+                logger.exception("Failed to send email reminder to %s", member.email)
+
+    logger.info("Sent payment reminders: %d upcoming, %d due today, %d overdue",
+                len(upcoming), len(due_today), len(overdue))
+    return True
+
+
+def send_payment_confirmation_task(member_contribution_id, treasurer_name):
+    """
+    Queue: Send confirmation email when treasurer logs payment.
+    Member is notified that payment has been received and confirmed.
+    """
+    try:
+        mc = MemberContribution.objects.get(id=member_contribution_id)
+    except MemberContribution.DoesNotExist:
+        logger.error("MemberContribution %s not found", member_contribution_id)
+        return False
+
+    member = mc.account
+    if not member or not member.email:
+        logger.warning("MemberContribution %s has no member email", member_contribution_id)
+        return False
+
+    try:
+        context = {
+            "user": member.get_full_name() or member.username,
+            "contribution_name": mc.contribution_type.name,
+            "amount_paid": mc.amount_due,
+            "treasurer_name": treasurer_name,
+            "reference": mc.reference,
+            "payment_date": mc.updated.strftime("%d %B %Y"),
+        }
+        html_content = render_to_string("emails/payment-confirmation.html", context)
+        text_content = strip_tags(html_content)
+
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
+        msg = EmailMessage(
+            subject=f"✓ Payment Confirmed: {mc.contribution_type.name}",
+            body=text_content,
+            from_email=from_email,
+            to=[member.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+        logger.info("Payment confirmation sent to %s for %s", member.email, member_contribution_id)
+        return True
+    except Exception:
+        logger.exception("Failed to send payment confirmation for %s", member_contribution_id)
+        return False

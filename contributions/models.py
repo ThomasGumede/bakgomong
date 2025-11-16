@@ -8,16 +8,25 @@ from django.contrib.auth import get_user_model
 
 from django.db.models import Sum
 import random
+import uuid
+from django.utils.crypto import get_random_string
+from django.db import transaction
 
 from accounts.utils.validators import verify_rsa_phone
 
 PHONE_VALIDATOR = verify_rsa_phone()
 
+class PaymentMethod(models.TextChoices):
+        CASH = 'cash', _('Cash')
+        BANK = 'bank', _('Bank Deposit')
+        MOBILE = 'mobile', _('Yoco Mobile Payment')
+        OTHER = 'other', _('Other')
+
 class SCOPE_CHOICES(models.TextChoices):
         CLAN = "clan", _("Entire Clan")
         FAMILY_LEADERS = "family_leaders", _("Family Leaders")
         FAMILY = "family", _("Specific Family")
-        EXECUTIVES = "Executives", _("Executives")
+        EXECUTIVES = "executives", _("Executives")
 
 class ContributionType(AbstractCreate):
     class Recurrence(models.TextChoices):
@@ -82,8 +91,15 @@ class ContributionType(AbstractCreate):
         return f"{self.name} ({self.get_category_display()})"
 
     def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.name)
+        # ensure unique slug (append counter when needed)
+        base = slugify(self.name) or "contribution"
+        if not self.slug or slugify(self.slug) != base:
+            slug = base
+            counter = 1
+            while ContributionType.objects.filter(slug=slug).exclude(pk=getattr(self, "pk", None)).exists():
+                slug = f"{base}-{counter}"
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)
         
     def clean(self):
@@ -120,7 +136,7 @@ class MemberContribution(AbstractCreate):
     amount_due = models.DecimalField(max_digits=10, decimal_places=2)
     reference = models.CharField(max_length=100, blank=True, null=True, help_text=_("Receipt or transaction reference"), unique=True)
     due_date = models.DateField(blank=True, null=True)
-    is_paid = models.CharField(max_length=100, choices=PaymentStatus.choices, default=PaymentStatus.NOT_PAID)
+    is_paid = models.CharField(max_length=100, choices=PaymentStatus.choices, default=PaymentStatus.NOT_PAID, db_index=True)
     
 
     class Meta:
@@ -134,17 +150,13 @@ class MemberContribution(AbstractCreate):
 
     @property
     def balance(self):
-        total_paid = sum(payment.amount for payment in self.payments.all())
+        # consistent calculation using DB aggregation
+        result = self.payments.aggregate(total=Sum("amount"))
+        total_paid = result.get("total") or 0
         return self.amount_due - total_paid
     
-    def generate_reference(self):
-        while True:
-            ref = f"CLN-{random.randint(100000, 999999)}"
-            if not MemberContribution.objects.filter(reference=ref).exists():
-                return ref
-            
     def save(self, *args, **kwargs):
-        self.reference = self.generate_reference()
+        # reference has default UUID; ensure not overwritten on update
         super().save(*args, **kwargs)
         
     def get_absolute_url(self):
@@ -154,11 +166,7 @@ class MemberContribution(AbstractCreate):
 class Payment(AbstractCreate, AbstractPayment):
     
     
-    class PaymentMethod(models.TextChoices):
-        CASH = 'cash', _('Cash')
-        BANK = 'bank', _('Bank Deposit')
-        MOBILE = 'mobile', _('Mobile Payment')
-        OTHER = 'other', _('Other')
+    
     
     checkout_id = models.CharField(max_length=200, unique=True, null=True, blank=True, db_index=True)
     
@@ -191,12 +199,19 @@ class Payment(AbstractCreate, AbstractPayment):
     
     def save(self, *args, **kwargs):
         from accounts.utils.abstracts import PaymentStatus
-        super().save(*args, **kwargs)
-        # ✅ Automatically update member contribution status
-        # if self.member_contribution:
-        #     total_paid = sum(p.amount for p in self.member_contribution.payments.all())
-        #     if total_paid >= self.member_contribution.amount_due:
-        #         self.member_contribution.is_paid = PaymentStatus.PAID
-        #         self.member_contribution.save()
+        # save payment and then atomically update related member_contribution status
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self.member_contribution:
+                # recalc total paid for the member contribution
+                total_paid = self.member_contribution.payments.aggregate(total=Sum("amount")).get("total") or 0
+                if total_paid >= self.member_contribution.amount_due:
+                    new_status = PaymentStatus.PAID
+                else:
+                    new_status = PaymentStatus.PARTIALLY_PAID if total_paid > 0 else PaymentStatus.NOT_PAID
+                # only save when status changes
+                if self.member_contribution.is_paid != new_status:
+                    self.member_contribution.is_paid = new_status
+                    self.member_contribution.save()
 
 

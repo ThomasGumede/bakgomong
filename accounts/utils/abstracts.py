@@ -1,4 +1,5 @@
 import uuid
+import re
 from django.db import models
 from django.utils.translation import gettext as _
 from accounts.utils.validators import validate_fcbk_link, validate_in_link, validate_insta_link, validate_twitter_link, verify_rsa_phone
@@ -13,10 +14,11 @@ class Title(models.TextChoices):
     PROF = ("PROF", "Prof.")
 
 class PaymentStatus(models.TextChoices):
-        PAID = ("PAID", "Paid")
-        PENDING = ("PENDING", "Pending")
-        NOT_PAID = ("NOT PAID", "Not paid")
-        CANCELLED = ("CANCELLED", "Cancelled")
+    PAID = ("PAID", "Paid")
+    PENDING = ("PENDING", "Pending")
+    NOT_PAID = ("NOT_PAID", "Not paid")
+    CANCELLED = ("CANCELLED", "Cancelled")
+    PARTIALLY_PAID = ("PARTIALLY_PAID", "PARTIALLY PAID")
         
 class Gender(models.TextChoices):
     MALE = ("MALE", "Male")
@@ -24,18 +26,25 @@ class Gender(models.TextChoices):
     OTHER = ("OTHER", "Other")
     
 class Role(models.TextChoices):
-    KGOSANA = ('KGOSANA', 'Kgosana')
-    CLAN_CHAIRPERSON = ('CHAIRPERSON', 'Chairperson')
-    FAMILY_LEADER = ('FAMILY LEADER', 'Family leader')
-    MEMBER = ('MEMBER', 'Member')
-    DEP_CHAIRPERSON = ('DEP-CHAIRPERSON', 'Deputy Chairperson')
-    SECRETARY = ('SECRETARY', 'Secretary')
-    DEP_SECRETARY = ('DEP SECRETARY', 'Deputy Secretary')
-    TREASURER = ('TREASURER', 'Treasurer')
+    KGOSANA = ("KGOSANA", "Kgosana")
+    CLAN_CHAIRPERSON = ("CLAN_CHAIRPERSON", "Chairperson")
+    FAMILY_LEADER = ("FAMILY_LEADER", "Family leader")
+    MEMBER = ("MEMBER", "Member")
+    DEP_CHAIRPERSON = ("DEP_CHAIRPERSON", "Deputy Chairperson")
+    SECRETARY = ("SECRETARY", "Secretary")
+    DEP_SECRETARY = ("DEP_SECRETARY", "Deputy Secretary")
+    TREASURER = ("TREASURER", "Treasurer")
 
 class AbstractProfile(models.Model):
     address = models.CharField(max_length=300, blank=True, null=True)
-    phone = models.CharField(help_text=_("Enter cellphone number"), max_length=15, validators=[PHONE_VALIDATOR], unique=True, null=True, blank=True)
+    phone = models.CharField(
+        help_text=_("Enter cellphone number"),
+        max_length=15,
+        validators=[PHONE_VALIDATOR],
+        unique=True,
+        null=True,
+        blank=True,
+    )
     facebook = models.URLField(validators=[validate_fcbk_link], blank=True, null=True)
     twitter = models.URLField(validators=[validate_twitter_link], blank=True, null=True)
     instagram = models.URLField(validators=[validate_insta_link], blank=True, null=True)
@@ -43,9 +52,22 @@ class AbstractProfile(models.Model):
 
     class Meta:
         abstract = True
+
+    def clean(self):
+        # normalize phone by removing non-digits (validators will still run)
+        if self.phone:
+            normalized = re.sub(r"\D+", "", self.phone)
+            # optionally keep leading + if required by validator; adjust as needed
+            self.phone = normalized
+        # normalize empty string -> None for optional URL fields
+        for fld in ("facebook", "twitter", "instagram", "linkedIn", "address"):
+            val = getattr(self, fld, None)
+            if isinstance(val, str) and not val.strip():
+                setattr(self, fld, None)
         
 class AbstractCreate(models.Model):
-    id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True, editable=False, db_index=True)
+    # primary key UUID; DB will index PK automatically (db_index not required)
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True, editable=False)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
@@ -57,7 +79,8 @@ class AbstractPayment(models.Model):
     payment_method_card_holder = models.CharField(max_length=50, null=True, blank=True)
     payment_method_masked_card = models.CharField(max_length=50, null=True, blank=True)
     payment_method_scheme = models.CharField(max_length=50, null=True, blank=True)
-    payment_date = models.CharField(max_length=50, null=True, blank=True)
+    # prefer a datetime field for payment date; use CharField only if you store provider raw payloads
+    payment_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         abstract = True

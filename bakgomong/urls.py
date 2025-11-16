@@ -12,7 +12,7 @@ urlpatterns = [
     path("", include("contributions.urls", namespace="contributions")),
 ]
 
-urlpatterns += [path(r'^i18n/', include('django.conf.urls.i18n'))]
+urlpatterns += [path('i18n/', include('django.conf.urls.i18n')),]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -48,23 +48,9 @@
                                 <td> <span
                                         class="{% if inv.is_paid == 'PAID' %}bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400{% elif inv.is_paid == 'PENDING' %}bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400{% else %}text-danger-600 bg-danger-100 dark:bg-danger-600/25 dark:text-danger-600{% endif %} px-6 py-1.5 rounded-full font-medium text-sm">{{inv.is_paid}}</span>
                                 </td>
-                                <td>
-                                    <div class="flex items-center gap-2">
-                                        <a href="{{inv.get_absolute_url}}"
-                                            class="w-8 h-8 bg-primary-50 dark:bg-primary-600/25 text-primary-600 rounded-full inline-flex items-center justify-center">
-                                            <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
-                                        </a>
-                                        
-                                        <a ata-tooltip-target="tooltip-Success" data-tooltip-placement="top" href="javascript:void(0)"
-                                            class="w-8 h-8 bg-success-100 dark:bg-success-600/25 tooltip text-success-600 dark:text-success-400 rounded-full inline-flex items-center justify-center">
-                                            <iconify-icon icon="lucide:edit"></iconify-icon>
-                                        </a>
-                                        <div id="tooltip-Success" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip dark:bg-gray-800">
-                                            Tooltip Success
-                                            <div class="tooltip-arrow" data-popper-arrow></div>
-                                        </div>
-                                        
-                                    </div>
+                                <td class="text-center">
+                                    <a href="{% url 'contributions:checkout' inv.id %}"
+                                        class="bg-success-focus dark:bg-success-500 text-success-main dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm">Paynow</a>
                                 </td>
                             </tr>
                             {% endfor %}

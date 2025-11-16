@@ -247,3 +247,26 @@ TWILIO_AUTH_TOKEN=config('TWILIO_AUTH_TOKEN')
 TWILIO_FROM='+12067456246'
 
 SITE_URL = "https://www.wedodev.co.za"
+
+INSTALLED_APPS += [
+    "django_q",
+]
+
+# Example: ORM broker (no external service)
+Q_CLUSTER = {
+    "name": "bakgomong",
+    "workers": 4,
+    "recycle": 500,
+    "timeout": 60,
+    "retry": 120,
+    "queue_limit": 50,
+    "bulk": 10,
+    "orm": "default",
+}
+
+# Or Redis broker (if you run redis)
+# Q_CLUSTER = {
+#     "name": "bakgomong",
+#     "workers": 4,
+#     "redis": {"host": "127.0.0.1", "port": 6379, "db": 0},
+# }

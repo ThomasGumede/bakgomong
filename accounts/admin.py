@@ -2,9 +2,13 @@ from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.admin import UserAdmin
+import logging
+from django.db.models import Count
 
 from accounts.models import Account, Family
 from accounts.utils.abstracts import Role
+
+logger = logging.getLogger("accounts")
 
 @admin.action(description="Approve selected members/family")
 def approve_members(modeladmin, request, queryset):
@@ -39,16 +43,23 @@ class FamilyAdmin(admin.ModelAdmin):
     leader_display.short_description = _("Leader")
 
     def member_count(self, obj):
-        return obj.members.count() if hasattr(obj, 'members') else obj.families.count()
+        # use annotated value if present to avoid extra query
+        return getattr(obj, "member_count", obj.members.count())
     member_count.short_description = _("Members")
     
     list_display = ("name", "leader_display", "member_count", "created", "is_approved")
-    search_fields = ("name", "leader__first_name")
+    search_fields = ("name", "leader__first_name", "leader__email")
     list_filter = ("created", "is_approved",)
     prepopulated_fields = {"slug": ("name",)}
     inlines = [AccountInline]
     ordering = ("-created",)
     actions = [approve_members]
+    raw_id_fields = ("leader",)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # annotate member counts once
+        return qs.annotate(member_count=Count("members"))
 
 
 # ------------------------------------------------------------
@@ -62,9 +73,11 @@ class AccountAdmin(UserAdmin):
         return "—"
     profile_image_preview.short_description = _("Profile Image Preview")
     
-    list_display = ("profile_image_preview", "first_name", "email", "family", "role", "is_active", "is_approved")
-    list_filter = ("role", "is_active", "gender", "family")
-    search_fields = ("first_name", "email", "phone")
+    list_display = ("profile_image_preview", "username", "first_name", "email", "family", "role", "is_active", "is_approved")
+    list_filter = ("role", "is_active", "gender",)
+    search_fields = ("username", "first_name", "email", "phone", "family__name")
+    list_select_related = ("family",)
+    autocomplete_fields = ("family",)
     ordering = ("-created",)
     readonly_fields = ("created", "updated", "profile_image_preview")
     actions = [approve_members]
@@ -105,8 +118,10 @@ class AccountAdmin(UserAdmin):
                 "role",
                 "family",
                 "is_active",
-                "is_staff", "is_approved"
-                "is_superuser", "groups",
+                "is_staff",
+                "is_approved",
+                "is_superuser",
+                "groups",
                 
             ),
         }),
@@ -148,4 +163,4 @@ class AccountAdmin(UserAdmin):
         }),
     )
 
-    
+

@@ -1,148 +1,135 @@
 import os
 from pathlib import Path
+from datetime import datetime
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-LOGGING_DIR = os.path.join(BASE_DIR, 'logs')
-if not os.path.exists(LOGGING_DIR):
-    os.makedirs(LOGGING_DIR)
+# create logs dir robustly
+LOGGING_DIR = BASE_DIR / "logs"
+LOGGING_DIR.mkdir(parents=True, exist_ok=True)
 
-LOGGING_LEVEL = 'ERROR'
+# make level configurable via env var (default INFO in prod you'd raise to WARNING/ERROR)
+LOGGING_LEVEL = os.getenv("LOGGING_LEVEL", "INFO").upper()
+
+# rotation config
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", 10 * 1024 * 1024))  # 10MB
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", 7))
 
 # Logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'custom': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        }
+        'default': {
+            'format': '%(levelname)s %(asctime)s %(name)s %(process)d %(threadName)s %(module)s %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
     },
     'handlers': {
-        'file': {
+        'console': {
             'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'errors.log'),
-            'formatter': 'custom'
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
         },
-        'campaign_file': {
+        'rotating_file': {
             'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'campaigns.log'),
-            'formatter': 'custom'
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGGING_DIR / 'app.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'formatter': 'default',
         },
-        'event_file': {
+        # per-area rotating handlers
+        'accounts_file': {
             'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'events.log'),
-            'formatter': 'custom'
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGGING_DIR / 'accounts.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'formatter': 'default',
         },
-        'account_file': {
+        'emails_file': {
             'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'accounts.log'),
-            'formatter': 'custom'
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGGING_DIR / 'emails.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'formatter': 'default',
         },
-        'payment_file': {
+        'tasks_file': {
             'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'payments.log'),
-            'formatter': 'custom'
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGGING_DIR / 'tasks.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'formatter': 'default',
         },
-        'task_file': {
+        'signals_file': {
             'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'tasks.log'),
-            'formatter': 'custom'
-        },
-        'email_file': {
-            'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'emails.log'),
-            'formatter': 'custom'
-        },
-        'util_file': {
-            'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'utils.log'),
-            'formatter': 'custom'
-        },
-        'listing_file': {
-            'level': LOGGING_LEVEL,
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'listings.log'),
-            'formatter': 'custom'
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGGING_DIR / 'signals.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'formatter': 'default',
         },
         'smtp_file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'smtp.log'),
-            'formatter': 'custom'
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGGING_DIR / 'smtp.log'),
+            'maxBytes': LOG_MAX_BYTES,
+            'backupCount': LOG_BACKUP_COUNT,
+            'formatter': 'default',
         },
-        'info_file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(LOGGING_DIR, 'infos.log'),
-            'formatter': 'custom'
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'include_html': True,
         },
-        
     },
     'loggers': {
+        # capture Django internals
         'django': {
+            'handlers': ['console', 'rotating_file'],
             'level': LOGGING_LEVEL,
-            'handlers': ['file'],
-            'propagate': True,
+            'propagate': False,
         },
-        'campaigns': {
-            'level': LOGGING_LEVEL,
-            'handlers': ['campaign_file'],
-            'propagate': True,
+        'django.request': {
+            'handlers': ['console', 'rotating_file', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
         },
-        'events': {
-            'level': LOGGING_LEVEL,
-            'handlers': ['event_file'],
-            'propagate': True,
-        },
+        # application-specific loggers
         'accounts': {
+            'handlers': ['accounts_file', 'console'],
             'level': LOGGING_LEVEL,
-            'handlers': ['account_file'],
-            'propagate': True,
-        },
-        'payments': {
-            'level': LOGGING_LEVEL,
-            'handlers': ['payment_file'],
-            'propagate': True,
-        },
-        'tasks': {
-            'level': LOGGING_LEVEL,
-            'handlers': ['task_file'],
-            'propagate': True,
+            'propagate': False,
         },
         'emails': {
+            'handlers': ['emails_file'],
             'level': LOGGING_LEVEL,
-            'handlers': ['email_file'],
-            'propagate': True,
+            'propagate': False,
         },
-        'utils': {
+        'tasks': {
+            'handlers': ['tasks_file'],
             'level': LOGGING_LEVEL,
-            'handlers': ['util_file'],
-            'propagate': True,
+            'propagate': False,
         },
-        'listings': {
+        'signals': {
+            'handlers': ['signals_file'],
             'level': LOGGING_LEVEL,
-            'handlers': ['listing_file'],
-            'propagate': True,
+            'propagate': False,
         },
+        # keep smtplib debug logs separate
         'smtplib': {
             'handlers': ['smtp_file'],
             'level': 'DEBUG',
+            'propagate': False,
         },
-        'infos': {
-            'handlers': ['info_file'],
-            'level': 'DEBUG',
-        },
-        
+    },
+    # root logger fallback
+    'root': {
+        'handlers': ['console', 'rotating_file'],
+        'level': LOGGING_LEVEL,
     },
 }
 

@@ -2,12 +2,14 @@ from accounts.forms import AccountUpdateForm, GeneralEditForm, SocialLinksForm, 
 from django.contrib.auth import login, logout, authenticate, get_user_model
 from accounts.models import Family
 from accounts.utils.custom_mail import send_email_confirmation_email, send_html_email, send_verification_email
+from django_q.tasks import async_task
 from django.shortcuts import redirect, render, get_object_or_404
 from accounts.utils.decorators import user_not_authenticated
 from accounts.utils.tokens import account_activation_token, verify_activation_token
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
+from django.db import transaction
 import logging, jwt
 
 
@@ -46,14 +48,20 @@ def custom_login(request):
                 )
                 return redirect(success_url)
         else:
-            account = User.objects.filter(username=form.cleaned_data["username"]).first()
-            if account != None and not account.is_active:
-                messages.error(request, f"Sorry your account is not active. We have sent account activation email to your email {account.email}")
+            # form is invalid; avoid using cleaned_data (may not exist)
+            username = request.POST.get("username")
+            account = User.objects.filter(username=username).first() if username else None
+            if account and not account.is_active:
+                messages.error(
+                    request,
+                    f"Account is not active. An activation email was sent to {account.email}."
+                )
                 sent = send_verification_email(account, request)
                 if not sent:
-                    pass
+                    logger.error("Failed to send activation email to %s", account.username)
                 return redirect("accounts:login")
-            
+
+            # Render login with form errors
             return render(
                 request=request, template_name=template_name, context={"form": form}
             )
@@ -82,12 +90,6 @@ def activate(request, uidb64, token):
     
     if user and account_activation_token.check_token(user, token):
         
-        send_html_email(
-            "BBGI Community",
-            user.email,
-            "emails/email_to_all.html",
-            {"user_names": user.get_full_name()}
-        )
 
         
         if not user.is_active:
@@ -106,9 +108,7 @@ def activate(request, uidb64, token):
             request,
             f"Activation link is expired! A new activation link has been sent to {user.email}."
         )
-        sent = send_verification_email(user, request)
-        if not sent:
-            logger.error(f"Failed to send activation email to {user.username}")
+        async_task("accounts.tasks.send_verification_email_task", user.pk)
     else:
         messages.error(request, "Invalid activation link. Please request a new one.")
 
@@ -136,11 +136,8 @@ def confirm_email(request, uidb64, token):
         return redirect("accounts:login")
     
     else:
-        messages.error(request, f"Email confirmation link is expired! New email confirmation link was sent to {user.email}")
-        sent = send_email_confirmation_email(user, user.email, request)
-
-        if not sent:
-            logger.error(f"Something went wrong trying to send email to {user.username}")
+        messages.error(request, f"Email confirmation link is expired! A new confirmation link was sent to {user.email}")
+        async_task("accounts.tasks.send_email_confirmation_task", user.pk, user.email)
 
     return redirect("accounts:login")
 
@@ -149,28 +146,37 @@ def register(request):
     # send_mail_to_everyone()
     template_name = "accounts/register.html"
     success_url = "dashboard:index"
-    family = Family.objects.all().first()
     
+    family = Family.objects.first()
+
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = True
-            user.family = family
-            user.save()
-            send_verification_email(user, request)
-            login(request, user)
-            messages.success(
-                request,
-                f"Dear {user}, please go to you email {user.email} inbox and click on \
-                    received activation link to confirm and complete the registration. Note: Check your spam folder.",
-            )
-            return redirect(success_url)
+            try:
+                with transaction.atomic():
+                    user = form.save(commit=False)
+                    # keep user inactive until email verification completes
+                    user.is_active = False
+                    user.is_email_activated = False
+                    if family:
+                        user.family = family
+                    user.save()
+ 
+                # queue verification email (non-blocking)
+                async_task("accounts.tasks.send_verification_email_task", user.pk)
+                messages.success(
+                    request,
+                    f"Dear {user.username}, please check {user.email} for an activation link. Check your spam folder."
+                )
+
+                # don't auto-login until email is verified; send user to activation-sent page
+                return redirect("accounts:login")
+            except Exception as e:
+                logger.exception("Registration failed")
+                messages.error(request, "Something went wrong while signing up. Try again.")
         else:
-            messages.error(request, "Something went wrong while signing up")
-            return render(
-                request=request, template_name=template_name, context={"form": form}
-            )
+            messages.error(request, "Please fix the errors below.")
+            return render(request=request, template_name=template_name, context={"form": form})
     
     form = RegistrationForm()
     return render(request=request, template_name=template_name, context={"form": form})
@@ -192,10 +198,9 @@ def general(request):
             user = form.save(commit=False)
             if old_email != new_email:
                 user.is_email_activated = False
-                sent = send_email_confirmation_email(request.user, new_email, request)
-                if not sent:
-                    logger.error(f"Email error - failed to send email to  {form.cleaned_data['email']}")
-
+                # queue email confirmation to new address
+                async_task("accounts.tasks.send_email_confirmation_task", request.user.pk, new_email)
+ 
                 messages.success(request, "we have also sent email confirmation to your new email address")
             else:
                 user.email = old_email
@@ -216,16 +221,17 @@ def general(request):
 @login_required
 def account_update(request):
     template = "accounts/my-account.html"
-
+ 
     if request.method == 'POST':
         form = AccountUpdateForm(instance=request.user, data=request.POST, files=request.FILES)
-        if form.is_valid() and form.is_multipart():
+        if form.is_valid():
             form.save()
             messages.success(request, "Your information was updated successfully")
             return redirect("accounts:profile-update")
         else:
+            messages.error(request, "Please fix the errors below.")
             return render(request, template, {"form": form})
-        
+         
     form = AccountUpdateForm(instance=request.user)  
     return render(request, template, {"form": form})
 

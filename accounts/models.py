@@ -21,13 +21,53 @@ class Family(AbstractCreate):
         verbose_name = _("Family")
         verbose_name_plural = _("Families")
         ordering = ["-created"]
+        indexes = [
+            models.Index(fields=["is_approved"]),
+            models.Index(fields=["slug"]),
+        ]
         
     def __str__(self):
         return self.name
     
     def save(self, *args, **kwargs):
-        self.slug = slugify(self.name)
+        # Only generate slug when creating or when name changed
+        base = slugify(self.name) or "family"
+        if not self.pk:
+            slug = base
+            counter = 1
+            while Family.objects.filter(slug=slug).exists():
+                slug = f"{base}-{counter}"
+                counter += 1
+            self.slug = slug
+        else:
+            # keep existing slug unless name changed
+            try:
+                old = Family.objects.get(pk=self.pk)
+                if old.name != self.name:
+                    slug = base
+                    counter = 1
+                    while Family.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                        slug = f"{base}-{counter}"
+                        counter += 1
+                    self.slug = slug
+            except Family.DoesNotExist:
+                self.slug = base
         super(Family, self).save(*args, **kwargs)
+        
+        if self.leader and self.leader.family_id != self.pk:
+            self.leader.family = self
+            self.leader.save(update_fields=["family"])
+        
+    def get_absolute_url(self):
+        return reverse("accounts:get-family", kwargs={"family_slug": self.slug})
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # Only validate after the family has been created
+        if self.pk and self.leader:
+            if getattr(self.leader, "family_id", None) != self.pk:
+                raise ValidationError({"leader": _("Leader must belong to this family.")})
         
     @property
     def total_unpaid(self):
@@ -40,6 +80,14 @@ class Family(AbstractCreate):
         from contributions.models import MemberContribution
         result = MemberContribution.objects.filter(account__family=self, is_paid=PaymentStatus.PAID).aggregate(total=Sum("amount_due"))
         return result["total"] or 0
+    
+    @property
+    def total_pending(self):
+        from contributions.models import MemberContribution
+        return MemberContribution.objects.filter(
+            account__family=self,
+            is_paid=PaymentStatus.PENDING
+        ).aggregate(total=Sum("amount_due"))["total"] or 0
 
 class Account(AbstractUser, AbstractProfile):
     profile_image = models.ImageField(help_text=_("Upload profile image"), upload_to=handle_profile_upload, null=True, blank=True)
@@ -57,9 +105,14 @@ class Account(AbstractUser, AbstractProfile):
         verbose_name = _("Account")
         verbose_name_plural = _("Accounts")
         ordering = ["-created"]
-        
+        indexes = [
+            models.Index(fields=["is_approved"]),
+            models.Index(fields=["family"]),
+        ]
+
     def __str__(self):
-        return self.get_full_name()
+        full = self.get_full_name() or ""
+        return full.strip() or self.username
     
     @property
     def total_unpaid(self):

@@ -1,9 +1,9 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import (AuthenticationForm,  UserCreationForm)
 from django.utils.translation import gettext_lazy as _
 from accounts.models import Family
+from accounts.utils.abstracts import Role
 
 class UserLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
@@ -52,7 +52,7 @@ class RegistrationForm(UserCreationForm):
 
     def clean_email(self):
         """Ensure email uniqueness across users."""
-        email = self.cleaned_data.get("email")
+        email = (self.cleaned_data.get("email") or "").strip().lower()
         User = get_user_model()
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError(
@@ -63,8 +63,9 @@ class RegistrationForm(UserCreationForm):
     def save(self, commit=True):
         """Save the user with email as username."""
         user = super().save(commit=False)
-        user.email = self.cleaned_data['email']
-        user.username = self.cleaned_data['email'] 
+        email = (self.cleaned_data['email'] or "").strip().lower()
+        user.email = email
+        user.username = email
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
 
@@ -116,18 +117,34 @@ class MemberForm(UserCreationForm):
 
     def clean_email(self):
         """Ensure email uniqueness across users."""
-        email = self.cleaned_data.get("email")
+        email = (self.cleaned_data.get("email") or "").strip().lower()
         User = get_user_model()
-        if User.objects.filter(email=email).exists():
+        if User.objects.exclude(pk=getattr(self.instance, "pk", None)).filter(email=email).exists():
             raise forms.ValidationError(
                 _(f"This email ({email}) is already registered.")
             )
         return email
 
+    def clean_username(self):
+        username = (self.cleaned_data.get("username") or "").strip()
+        User = get_user_model()
+        if User.objects.exclude(pk=getattr(self.instance, "pk", None)).filter(username=username).exists():
+            raise forms.ValidationError(_(f"This username ({username}) is already in use."))
+        return username
+
     def save(self, commit=True):
         """Save the user with email as username."""
         user = super().save(commit=False)
-        user.email = self.cleaned_data['email']
+        email = (self.cleaned_data.get('email') or "").strip().lower()
+        user.email = email
+        # if username not provided or equals email field, keep it consistent
+        if not user.username or user.username == "":
+            user.username = email
+        # keep new members inactive until they verify / are approved
+        if not getattr(user, "pk", None):
+            user.is_active = False
+            if hasattr(user, "is_email_activated"):
+                user.is_email_activated = False
 
         if commit:
             user.save()
@@ -223,4 +240,41 @@ class FamilyForm(forms.ModelForm):
             field.widget.attrs['autocomplete'] = 'off'
             if self.initial.get(field_name) is None:
                 self.initial[field_name] = ''
+                
+        User = get_user_model()
+        allowed_roles = [
+            Role.MEMBER, 
+            Role.DEP_SECRETARY, 
+            Role.CLAN_CHAIRPERSON,
+            Role.DEP_CHAIRPERSON,
+            Role.TREASURER
+        ]
+
+        self.fields["leader"].queryset = User.objects.filter(role__in=allowed_roles)
         
+        # Ensure editing pre-selects the current leader (if any)
+        if self.instance.pk and self.instance.leader:
+            self.initial["leader"] = self.instance.leader.pk
+            
+class AddFamilyForm(forms.ModelForm):
+    class Meta:
+        model = Family
+        fields = ('name', 'leader')
+        
+        widgets = {
+            'name': forms.TextInput(attrs={"class": "text-custom-text pl-5 pr-[50px] outline-none border-2 border-[#e4ecf2] focus:border focus:border-custom-primary h-[65px] block w-full rounded-none focus:ring-0 focus:outline-none placeholder:text-custom-text placeholder:text-sm"}),
+            'leader': forms.Select(attrs={"class": "form-control rounded-lg form-select"}),
+            
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        for field_name, field in self.fields.items():
+            field.widget.attrs['autocomplete'] = 'off'
+            if self.initial.get(field_name) is None:
+                self.initial[field_name] = ''
+        # Limit choices to only members who are family leaders
+        if getattr(self.instance, "pk", None):
+            User = get_user_model()
+            self.fields["leader"].queryset = User.objects.filter(role_in=[Role.MEMBER, Role.DEP_SECRETARY, Role.CLAN_CHAIRPERSON, Role.DEP_CHAIRPERSON, Role.TREASURER])

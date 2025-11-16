@@ -1,32 +1,29 @@
-import logging, base64
+import logging
+import base64
+import mimetypes
 from django.utils.encoding import force_bytes
 from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from accounts.utils.tokens import account_activation_token, generate_activation_token
 from django.utils.http import urlsafe_base64_encode
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, EmailMultiAlternatives, get_connection
 from django.conf import settings
 
 logger = logging.getLogger("emails")
 
 def send_html_email(subject, to_email, template_name, context):
     try:
-        
         html_content = render_to_string(template_name, context)
+        text_content = strip_tags(html_content)
 
-        # Create the email message
-        email = EmailMessage(
-            subject=subject,
-            body=html_content,
-            from_email='BAKGOMONG Community <noreply@bakgomong.co.za>',
-            to=[to_email],
-        )
-        email.content_subtype = 'html' 
-
-        # Send the email
-        email.send()
-        logger.info(f"Email sent to {to_email} without attachment.")
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
+        msg = EmailMultiAlternatives(subject=subject, body=text_content, from_email=from_email, to=[to_email])
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+        logger.info("Email sent to %s (html)", to_email)
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}. Error: {e}")  
+        logger.exception("Failed to send email to %s", to_email)
+
 
 def send_email_confirmation_email(user, new_email, request):
     try:
@@ -40,57 +37,39 @@ def send_email_confirmation_email(user, new_email, request):
                 }, request
             )
 
-        email = EmailMessage(
-                subject=mail_subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email],
-            )
-        email.content_subtype = 'html' 
-
-            # Send the email
-        email.send()
-        logger.info(f"Email sent to {user.email} without attachment.")
-            
+        recipient = (new_email or "").strip() or user.email
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
+        text_content = strip_tags(message)
+        msg = EmailMultiAlternatives(subject=mail_subject, body=text_content, from_email=from_email, to=[recipient])
+        msg.attach_alternative(message, "text/html")
+        msg.send()
+        logger.info("Confirmation email sent to %s", recipient)
         return True
     except Exception as err:
-        logger.error(f"Failed to send send_email_confirmation_email to {user.email}. Error: {err}")
+        logger.exception("Failed to send send_email_confirmation_email to %s", getattr(user, "email", "<unknown>"))
         return False
     
 def send_verification_email(user, request):
-        
-        try:
-            mail_subject = "BAKGOMONG | Activate Account"
-            message = render_to_string("emails/account/account_activate_email.html",
-                {
-                    "user": user.get_full_name(),
-                    "uid": generate_activation_token(user),
-                    "token": account_activation_token.make_token(user),
-                }, request
-            )
-            
-            # sent = custom_send_email(user.email, mail_subject, message)
+    try:
+        mail_subject = "BAKGOMONG | Activate Account"
+        message = render_to_string("emails/account/account_activate_email.html",
+            {
+                "user": user.get_full_name(),
+                "uid": generate_activation_token(user),
+                "token": account_activation_token.make_token(user),
+            }, request
+        )
 
-            # if not sent:
-            #     logger.error("User did not receive email")
-            #     return False
-
-            email = EmailMessage(
-                subject=mail_subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email],
-            )
-            email.content_subtype = 'html' 
-
-            # Send the email
-            email.send()
-            logger.info(f"Email sent to {user.email} without attachment.")
-            
-            return True
-        except Exception as err:
-             logger.error(f"Failed to send send_verification_email to {user.email}. Error: {err}")
-             return False
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
+        text_content = strip_tags(message)
+        msg = EmailMultiAlternatives(subject=mail_subject, body=text_content, from_email=from_email, to=[user.email])
+        msg.attach_alternative(message, "text/html")
+        msg.send()
+        logger.info("Verification email sent to %s", user.email)
+        return True
+    except Exception as err:
+        logger.exception("Failed to send send_verification_email to %s", getattr(user, "email", "<unknown>"))
+        return False
 
 def send_password_reset_email(user, request):
     try:
@@ -101,45 +80,43 @@ def send_password_reset_email(user, request):
             'token': account_activation_token.make_token(user),
         }, request)
             
-            
-        # sent = custom_send_email(user.email, subject, message)
-        # if not sent:
-        #     return False
-           
-        email = EmailMessage(
-                subject=mail_subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email],
-            )
-        email.content_subtype = 'html' 
-
-            # Send the email
-        email.send()
-        logger.info(f"Email sent to {user.email} without attachment.")
-            
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@bakgomong.co.za")
+        text_content = strip_tags(message)
+        msg = EmailMultiAlternatives(subject=mail_subject, body=text_content, from_email=from_email, to=[user.email])
+        msg.attach_alternative(message, "text/html")
+        msg.send()
+        logger.info("Password reset email sent to %s", user.email)
         return True
     except Exception as err:
-        logger.error(f"Failed to send send_password_reset_email to {user.email}. Error: {err}")
+        logger.exception("Failed to send send_password_reset_email to %s", getattr(user, "email", "<unknown>"))
         return False
 
 def send_html_email_with_attachments(to_email: str, subject: str, html_content: str, from_email: str, attachments: list = None) -> bool:
     try:
-        email = EmailMessage(subject=subject, body=html_content, from_email=from_email, to=[to_email])
-        email.content_subtype = 'html'
+        msg = EmailMultiAlternatives(subject=subject, body=strip_tags(html_content), from_email=from_email, to=[to_email])
+        msg.attach_alternative(html_content, "text/html")
 
         # Attach files if provided
         if attachments:
             for attachment in attachments:
-                email.attach(attachment['filename'], base64.b64decode(attachment['file_content']), 'application/pdf')
+                try:
+                    filename = attachment.get("filename")
+                    content = attachment.get("file_content")
+                    if isinstance(content, str):
+                        binary = base64.b64decode(content)
+                    else:
+                        binary = content.read() if hasattr(content, "read") else bytes(content)
+                    ctype, _ = mimetypes.guess_type(filename or "")
+                    msg.attach(filename, binary, ctype or "application/octet-stream")
+                except Exception:
+                    logger.exception("Failed to attach file %s for email to %s", attachment.get("filename"), to_email)
 
-        email.send()
-        logger.info(f"Email sent to {to_email} with attachments.")
+        msg.send()
+        logger.info("Email with attachments sent to %s", to_email)
         return True
-
-    except Exception as e:
-        logger.error(f"Failed to send email to {to_email}. Error: {e}")
+    except Exception:
+        logger.exception("Failed to send email with attachments to %s", to_email)
         return False
 
- 
+
 

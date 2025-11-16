@@ -9,7 +9,7 @@ from django.shortcuts import render, redirect
 from accounts.utils.tokens import account_activation_token
 import logging
 
-from accounts.utils.custom_mail import send_password_reset_email, send_verification_email
+from django_q.tasks import async_task
 from accounts.utils.decorators import user_not_authenticated
 
 email_logger = logging.getLogger("emails")
@@ -39,49 +39,44 @@ def password_reset_request(request):
         if request.method == 'POST':
             form = PasswordResetForm(request.POST)
             if form.is_valid():
-                user_email = form.cleaned_data['email']
-                user = get_user_model().objects.get(email=user_email)
-                if not user.is_active:
-                    messages.error(request, f"Sorry your account is not active. We have sent account activation email to your email {user.email}")
-                    sent = send_verification_email(user, request)
-                    if sent:
-                        return redirect("accounts:login")
+                email = form.cleaned_data['email']
+                User = get_user_model()
+                user = User.objects.filter(email__iexact=email).first()
 
-                # sent = send_password_reset_email(user, request)
-                # if not sent:
-                #     email_logger.error(f"Password reset email to {user.get_full_name()} was not sent")
+                # Always show a generic success message to avoid account enumeration.
+                # If a user exists, attempt to send the appropriate email and log failures.
+                if user:
+                    try:
+                        if not user.is_active:
+                            async_task("accounts.tasks.send_verification_email_task", user.pk)
+                        else:
+                            async_task("accounts.tasks.send_password_reset_email_task", user.pk)
+                    except Exception as exc:
+                        account_logger.exception("Failed sending reset/activation email for %s", email)
 
-                messages.success(request, "Password reset email was successfully sent")
+                messages.success(request, "If an account with that email exists, we have sent password reset instructions.")
                 return redirect("accounts:password-reset-sent")
             else:
                 return render(request, "accounts/password/pwd_reset_form.html", {"form": form})
-            
-    except get_user_model().DoesNotExist as ex:
-        account_logger.error(f"User not found - trying to request email reset - {ex}")
-        messages.success(request, "Password reset email was successfully sent")
+    except Exception as ex:
+        account_logger.exception("Unexpected error in password_reset_request")
+        # keep response generic
+        messages.success(request, "If an account with that email exists, we have sent password reset instructions.")
         return redirect("accounts:password-reset-sent")
 
-    except Exception as ex:
-        account_logger.error(ex)
-        messages.success(request, "Password reset email was successfully sent")
-        return redirect("accounts:password-reset-sent")
-    
     form = PasswordResetForm()
-    return render(
-        request=request, 
-        template_name="accounts/password/pwd_reset_form.html", 
-        context={"form": form}
-        )
+    return render(request, "accounts/password/pwd_reset_form.html", {"form": form})
 
 def password_reset_sent(request):
     return render(request, "accounts/password/password_email_sent.html")
 
-def passwordResetConfirm(request, uidb64, token):
+def password_reset_confirm(request, uidb64, token):
+    # renamed from passwordResetConfirm -> password_reset_confirm
     User = get_user_model()
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except:
+        user = User.objects.filter(pk=uid).first()
+    except Exception:
         user = None
 
     if user is not None and account_activation_token.check_token(user, token):
@@ -89,7 +84,7 @@ def passwordResetConfirm(request, uidb64, token):
             form = SetPasswordForm(user, request.POST)
             if form.is_valid():
                 form.save()
-                messages.success(request, "Your password has been set. You may go ahead and <b>log in </b> now.")
+                messages.success(request, "Your password has been set. You can log in now.")
                 return redirect('accounts:login')
             else:
                 return render(request, 'accounts/password/pwd_reset_confirm.html', {'form': form})
@@ -97,5 +92,5 @@ def passwordResetConfirm(request, uidb64, token):
         form = SetPasswordForm(user)
         return render(request, 'accounts/password/pwd_reset_confirm.html', {'form': form})
     else:
-        messages.error(request, "Link is expired")
+        messages.error(request, "Password reset link is invalid or expired.")
         return redirect("accounts:reset-password")
