@@ -65,7 +65,7 @@
 
             <li class="sidebar-menu-group-title">{{request.user.family}}</li>
             <li>
-                <a href="{% url 'accounts:no-slug-get-family' %}">
+                <a href="{% url 'accounts:get-family' request.user.family.slug %}">
                     <iconify-icon icon="flowbite:users-group-outline" class="menu-icon"></iconify-icon>
                     <span>Family overview</span>
                 </a>
