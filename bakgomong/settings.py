@@ -120,12 +120,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Database & Static
 if DEBUG:
     ALLOWED_HOSTS = ['wedodev.co.za', 'www.wedodev.co.za', 'localhost']
+    CSRF_TRUSTED_ORIGINS = ['https://127.0.0.1', 'https://localhost', 'https://wedodev.co.za', 'https://www.wedodev.co.za']
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    X_FRAME_OPTIONS = "SAMEORIGIN"
+    
+
+    # SSL SETTINGS
+    
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
     
     STATIC_URL = 'static/'
-    STATICFILES_DIRS = [
-        BASE_DIR / 'static'
-    ]
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static_root')
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+    
+    SILENCED_SYSTEM_CHECKS = ['security.W019']
     
 else:
     ALLOWED_HOSTS = ['wedodev.co.za', 'www.wedodev.co.za', 'localhost']
