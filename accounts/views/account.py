@@ -19,8 +19,8 @@ User = get_user_model()
 
 @login_required
 def user_details(request, username):
-    model = get_object_or_404(get_user_model().objects.prefetch_related("businesses").all(), username=username)
-    template = "accounts/account.html"
+    model = get_object_or_404(get_user_model().objects.all(), username=username)
+    template = "accounts/profile.html"
     context = {
         "user": model
     }

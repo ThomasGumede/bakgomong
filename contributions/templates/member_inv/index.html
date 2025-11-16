@@ -52,26 +52,31 @@ Contributions {% endif %}
                                 <td class="text-center">
                                     {% comment %} Pay now / Treasurer log actions {% endcomment %}
                                     {% if inv.is_paid == 'PAID' %}
-                                        <a href="{{ inv.get_absolute_url }}" class="btn btn-sm btn-success" aria-label="Pay contribution {{ inv.reference }}">
-                                            View receipt
-                                        </a>
+                                    <a href="{{ inv.get_absolute_url }}"
+                                        class="bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                        aria-label="Pay contribution {{ inv.reference }}">
+                                        View receipt
+                                    </a>
                                     {% else %}
-                                        {% if request.user.role == 'TREASURER' or request.user.is_staff and request.user != inv.account %}
-                                        <a href="{% url 'contributions:log-payment' inv.id %}" class="btn btn-sm btn-secondary ms-2"
-                                            aria-label="Log payment for {{ inv.reference }}">
-                                            Log payment
-                                        </a>
-                                        {% elif request.user == inv.account and inv.is_paid == 'NOT PAID' %}
-                                        <a href="{% url 'contributions:checkout' inv.id %}" class="btn btn-sm btn-success"
-                                            aria-label="Pay contribution {{ inv.reference }}">
-                                            Pay now
-                                        </a>
-                                        {% else %}
-                                        <a href="{{ inv.get_absolute_url }}" class="btn btn-sm btn-success"
-                                            aria-label="Pay contribution {{ inv.reference }}">
-                                            View receipt
-                                        </a>
-                                        {% endif %}
+                                    {% if request.user.role == 'TREASURER' or request.user.is_staff and request.user != inv.account %}
+                                    <a href="{% url 'contributions:log-payment' inv.id %}"
+                                        class="bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                        aria-label="Log payment for {{ inv.reference }}">
+                                        Log payment
+                                    </a>
+                                    {% elif request.user == inv.account and inv.is_paid == 'NOT PAID' %}
+                                    <a href="{% url 'contributions:checkout' inv.id %}"
+                                        class="bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                        aria-label="Pay contribution {{ inv.reference }}">
+                                        Pay now
+                                    </a>
+                                    {% else %}
+                                    <a href="{{ inv.get_absolute_url }}"
+                                        class="bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                        aria-label="Pay contribution {{ inv.reference }}">
+                                        View receipt
+                                    </a>
+                                    {% endif %}
                                     {% endif %}
                                 </td>
                             </tr>

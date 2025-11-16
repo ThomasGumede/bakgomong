@@ -127,6 +127,9 @@ class ContributionType(AbstractCreate):
     
     def get_update_url(self):
         return reverse("contributions:update-contribution", kwargs={"contribution_slug": self.slug})
+
+    def get_delete_url(self):
+        return reverse("contributions:delete-contribution", kwargs={"contribution_slug": self.slug})
     
 
 class MemberContribution(AbstractCreate):

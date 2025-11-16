@@ -31,30 +31,40 @@ def get_contribution(request, contribution_slug):
     Display contribution details: total collected, outstanding, by family.
     Optimized queries with select_related/prefetch_related.
     """
+    
+    user = request.user
     contribution = get_object_or_404(ContributionType, slug=contribution_slug)
 
-    # 💰 Fetch all payments related to this contribution
-    payments = (
-        Payment.objects
-        .filter(contribution_type=contribution)
-        .select_related("account", "account__family", "recorded_by")
-        .order_by("-payment_date")
-    )
-
-    # Paginate payments (50 per page)
-    paginator = Paginator(payments, 50)
-    page = request.GET.get('page')
-    try:
-        payments_page = paginator.page(page)
-    except PageNotAnInteger:
-        payments_page = paginator.page(1)
-    except EmptyPage:
-        payments_page = paginator.page(paginator.num_pages)
-
-    outstandings = MemberContribution.objects.filter(
+    payments = None
+    outstandings = None
+    
+    # Display based on roles
+    if is_treasurer_or_admin(user):
+        payments = (
+            Payment.objects
+            .filter(contribution_type=contribution)
+            .select_related("account", "account__family", "recorded_by")
+            .order_by("-payment_date")
+        )
+        outstandings = MemberContribution.objects.filter(
         contribution_type=contribution,
-        is_paid=PaymentStatus.NOT_PAID
-    ).select_related("account", "account__family")
+        is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING']
+        ).select_related("account", "account__family")
+    else:
+        payments = (
+            Payment.objects
+            .filter(contribution_type=contribution, account=user)
+            .select_related("account", "account__family", "recorded_by")
+            .order_by("-payment_date")
+        )
+        outstandings = MemberContribution.objects.filter(
+        contribution_type=contribution,
+        is_paid__in=[PaymentStatus.NOT_PAID, 'NOT PAID', PaymentStatus.PENDING, 'PENDING'], account=user
+        ).select_related("account", "account__family")
+
+    
+
+    
     
     # Aggregate totals (single query)
     unpaid_amount = outstandings.aggregate(total=Sum('amount_due'))['total'] or 0
@@ -71,12 +81,12 @@ def get_contribution(request, contribution_slug):
 
     context = {
         "contribution": contribution,
-        "payments": payments_page,
+        "payments": payments,
         "total_collected": total_collected,
         "totals_by_family": totals_by_family,
         "unpaid_amount": unpaid_amount,
         "outstanding_count": outstanding_count,
-        "outstandings": outstandings[:20],  # Show first 20 outstanding
+        "outstandings": outstandings,  # Show first 20 outstanding
     }
 
     return render(request, "contributions/contribution.html", context)

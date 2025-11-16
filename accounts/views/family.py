@@ -10,14 +10,18 @@ from django.db.models import Sum
 from accounts.utils.abstracts import Role
 from contributions.models import Payment, MemberContribution
 from dashboard.models import ClanDocument
+from django.contrib.auth import get_user_model
 import logging
 
 logger = logging.getLogger("accounts")
 
 @login_required
 def get_families(request):
-    
-    families = Family.objects.filter(is_approved=True)
+    user  = request.user
+    if user.role == Role.MEMBER and not user.is_staff:
+        families = Family.objects.filter(is_approved=True, id=user.family.id)
+    else:
+        families = Family.objects.filter(is_approved=True)
     return render(request, 'family/families.html', {"families": families})
 
 
@@ -26,32 +30,59 @@ def get_family(request, family_slug):
     """
     Show a family's profile, members, total contributions, unpaid balances, and uploaded documents.
     """
+    user  = request.user
     # Ensure only approved families are viewable
-    family = get_object_or_404(Family.objects.filter(is_approved=True), slug=family_slug)
-    # Show most recent 5 contributions
-    contributions = (
-        MemberContribution.objects.filter(account__family=family)
-        .select_related("account", "contribution_type")
-        .order_by("-created")[:5]
-    )
+    if user.role == Role.MEMBER and not user.is_staff:
+        families = Family.objects.filter(is_approved=True, id=user.family.id)
+        family = get_object_or_404(families, slug=family_slug)
+        contributions = (
+            MemberContribution.objects.filter(account__family=family, account=user)
+            .select_related("account", "contribution_type")
+            .order_by("-created")[:5]
+        )
+        total_contributed = (
+            Payment.objects.filter(account=user, account__family=family)
+            .aggregate(total=Sum("amount"))
+            .get("total")
+            or 0
+        )
+        total_unpaid = (
+            MemberContribution.objects.filter(account__family=family, is_paid='NOT PAID', account=user)
+            .aggregate(total=Sum("amount_due"))
+            .get("total")
+            or 0
+        )
+    else:
+        families = Family.objects.filter(is_approved=True)
+        family = get_object_or_404(families, slug=family_slug)
+    
+        # Show most recent 5 contributions
+        contributions = (
+            MemberContribution.objects.filter(account__family=family)
+            .select_related("account", "contribution_type")
+            .order_by("-created")[:5]
+        )
+        
+        # 2️⃣ Calculate total contributed and unpaid
+        total_contributed = (
+            Payment.objects.filter(account__family=family)
+            .aggregate(total=Sum("amount"))
+            .get("total")
+            or 0
+        )
+        total_unpaid = (
+            MemberContribution.objects.filter(account__family=family, is_paid='NOT PAID')
+            .aggregate(total=Sum("amount_due"))
+            .get("total")
+            or 0
+        )
 
     # 1️⃣ Get all members in the family
     members = family.members.select_related("family").all()
 
-    # 2️⃣ Calculate total contributed and unpaid
-    total_contributed = (
-        Payment.objects.filter(account__family=family)
-        .aggregate(total=Sum("amount"))
-        .get("total")
-        or 0
-    )
+    
 
-    total_unpaid = (
-        MemberContribution.objects.filter(account__family=family, is_paid='NOT PAID')
-        .aggregate(total=Sum("amount_due"))
-        .get("total")
-        or 0
-    )
+    
 
     total_due = (
         MemberContribution.objects.filter(account__family=family)

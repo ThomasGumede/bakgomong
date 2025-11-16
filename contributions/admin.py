@@ -59,7 +59,7 @@ class MemberContributionAdmin(admin.ModelAdmin):
 
     def amount_due_display(self, obj):
         """Display amount in currency format."""
-        return format_html("<strong>R{:.2f}</strong>", obj.amount_due)
+        return format_html("<strong>R{}</strong>", obj.amount_due)
     amount_due_display.short_description = _("Amount Due")
 
     def due_date_display(self, obj):

@@ -124,10 +124,10 @@
                             <th scope="col">Members </th>
                             <th scope="col" class="text-center">Email</th>
                             
-                            <th scope="col" class="text-center">Paid Amount</th>
+                            <th scope="col" class="text-center">Phone</th>
                             
-                            <th scope="col" class="text-center">Unpaid Amount</th>
-                            <th scope="col" class="text-center">Last Login</th>
+                            <th scope="col" class="text-center">Role</th>
+                            
                             <th scope="col" class="text-center">Active</th>
                             
                         </tr>
@@ -139,7 +139,7 @@
                         <tr>
                             <td class="">
                                 <div class="flex items-center">
-                                    <img src="{% static 'images/users/user1.png' %}" alt="{{member.get_full_name}}"
+                                    <img src="{% if member.profile_image %}{{member.profile_image.url}}{% else %}{% static 'dashboard/images/user-grid/user-grid-img13.png' %}{% endif %}" alt="{{member.get_full_name}}"
                                         class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
                                     <div class="grow">
                                         <h6 class="text-base mb-0 font-medium">{{member.get_full_name}}</h6>
@@ -147,9 +147,9 @@
                                 </div>
                             </td>
                             <td class="text-center">{{member.email}}</td>
-                            <td class="text-center">R{{member.total_paid}}</td>
-                            <td class="text-center">R{{member.total_unpaid}}</td>
-                            <td class="text-center">{{member.last_login}}</td>
+                            <td class="text-center">{{member.phone}}</td>
+                            <td class="text-center">{{member.get_role_display}}</td>
+                            
                             
                             <td class="text-center">
                                 <a href=""

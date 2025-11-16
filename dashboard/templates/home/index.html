@@ -18,8 +18,8 @@ Home
                             <img src="{% static 'images/home-eleven/icons/home-eleven-icon1.svg' %}" alt="">
                         </span>
                         <div>
-                            <span class="font-medium text-neutral-600 text-base">Clan Account Balance</span>
-                            <h6 class="font-semibold mt-[2px]">R{{total_paid}}</h6>
+                            <span class="font-medium text-neutral-600 text-base">Kgotla Account Balance</span>
+                            <h6 class="font-semibold mt-[2px]">R{{clan_total_paid}}</h6>
                         </div>
                     </div>
                 </div>
@@ -27,7 +27,7 @@ Home
                     <span
                         class="bg-success-focus px-1.5 py-[2px] rounded-[6px] font-medium text-success-600 dark:text-success-500 text-sm flex items-center gap-1">
                         <i class="ri-arrow-right-up-line"></i> 
-                    </span> Total Balance
+                    </span> Total Balance Ya Kgotla
                 </p>
             </div>
         </div>
@@ -45,17 +45,42 @@ Home
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Outstanding Balance</span>
-                            <h6 class="font-semibold mt-[2px]">R{{total_unpaid}}</h6>
+                            <h6 class="font-semibold mt-[2px]">R{{clan_total_unpaid}}</h6>
                         </div>
                     </div>
                 </div>
                 <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
-                    17 Members are behind with payments
+                    {{clan_total_unpaid_count}} Members are behind with payments
                 </p>
             </div>
         </div>
     </div>
-    {% else %}
+    {% endif %}
+    <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
+        <div
+            class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#d4f7ff] dark:from-neutral-700 dark:to-neutral-800">
+            <div class="card-body p-0">
+                <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+                    <div class="flex items-center gap-2.5">
+                        <span
+                            class="mb-0 w-[48px] h-[48px] bg-cyan-600 flex-shrink-0 text-white flex justify-center items-center rounded-full h6">
+                            <img src="{% static 'images/home-eleven/icons/home-eleven-icon1.svg' %}" alt="">
+                        </span>
+                        <div>
+                            <span class="font-medium text-neutral-600 text-base">Your Balance</span>
+                            <h6 class="font-semibold mt-[2px]">R{{member_total_paid}}</h6>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
+                    <span
+                        class="bg-success-focus px-1.5 py-[2px] rounded-[6px] font-medium text-success-600 dark:text-success-500 text-sm flex items-center gap-1">
+                        <i class="ri-arrow-right-up-line"></i>
+                    </span> Total Balance Paid By You
+                </p>
+            </div>
+        </div>
+    </div>
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#ffefdd] dark:from-neutral-700 dark:to-neutral-800">
@@ -68,17 +93,16 @@ Home
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Outstanding Balance</span>
-                            <h6 class="font-semibold mt-[2px]">R{{total_unpaid}}</h6>
+                            <h6 class="font-semibold mt-[2px]">R{{member_total_unpaid}}</h6>
                         </div>
                     </div>
                 </div>
                 <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
-                    Amount You Have Not Paid
+                    You have {{member_total_unpaid_count}} unpaid invoices. You can<a class="text-custom-primary" href="#invoices">pay now</a>.
                 </p>
             </div>
         </div>
     </div>
-    {% endif %}
     
     {% if upcoming_meeting %}
         <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
@@ -128,7 +152,7 @@ Home
     </div>
     {% endif %}
         
-    
+    {% if request.user.is_staff %}
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#deffec] to-[#f6fffa] dark:from-neutral-700 dark:to-neutral-800">
@@ -151,72 +175,13 @@ Home
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 <!-- Widgets end -->
 
-<div class="mt-6">
-    <div class="grid grid-cols-1 sm:grid-cols-12 gap-6">
-        <div class="col-span-12 xl:col-span-8">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                
-                
-                <div class="col-span-12">
-                    <div class="card h-full rounded-lg border-0">
-                        <div class="card-body p-6">
-                            <div class="flex items-center flex-wrap gap-2 justify-between">
-                                <div>
-                                    <h6 class="mb-2 font-bold text-lg">Contributions Growth</h6>
-                                    <span class="text-sm font-medium text-secondary-light">Yearly Report</span>
-                                </div>
-                                <div class="text-end">
-                                    <h6 class="mb-2 font-bold text-lg">R50,000.00</h6>
-                                    <span
-                                        class="bg-success-100 dark:bg-success-600/25 px-3 py-1 rounded font-medium text-success-600 dark:text-success-400 text-sm">R10k</span>
-                                </div>
-                            </div>
-                            <div id="revenue-chart" class="mt-0"></div>
-                        </div>
-                    </div>
-                </div>
-
-                
-            </div>
-        </div>
-
-        <!-- Sidebar start -->
-        <div class="col-span-12 xl:col-span-4">
-            <div class="card border-0 rounded-2xl">
-                <div class="card-header">
-                    <div class="flex items-center flex-wrap gap-2 justify-between">
-                        <h6 class="font-bold text-lg mb-0">Quick Transfer</h6>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="p-5">
-                        <div class="relative z-[1] py-8 text-center px-4">
-                            <img src="{% static 'images/home-eleven/bg/bg-orange-gradient.png' %}" alt=""
-                                class="absolute top-0 start-0 w-full h-full -z-[1]">
-                            <h3 class="text-white">R{{request.user.total_unpaid}}</h3>
-                            <span class="text-white">Your Outstanding Balance</span>
-                            <a href="" class="text-white">Pay Now</a>
-                        </div>
-                    </div>
-
-                    
-                </div>
-            </div>
-
-            
-
-        </div>
-        <!-- Sidebar end -->
-
-    </div>
-</div>
-
 
 {% if payments.count > 0 %}
-<div class="card border-0 rounded-2xl  mt-6">
+<div id="invoices" class="card border-0 rounded-2xl  mt-6">
     <div class="card-header">
         <div class="flex items-center flex-wrap gap-2 justify-between">
             <h6 class="font-bold text-lg mb-0">Payment History</h6>
@@ -260,24 +225,31 @@ Home
                             <td> <span
                                     class="{% if inv.is_paid == 'PAID' %}bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400{% elif inv.is_paid == 'PENDING' %}bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400{% else %}text-danger-600 bg-danger-100 dark:bg-danger-600/25 dark:text-danger-600{% endif %} px-6 py-1.5 rounded-full font-medium text-sm">{{inv.is_paid}}</span>
                             </td>
-                            <td>
-                                <div class="flex items-center gap-2">
-                                    <a href="{{inv.get_absolute_url}}"
-                                        class="w-8 h-8 bg-primary-50 dark:bg-primary-600/25 text-primary-600 rounded-full inline-flex items-center justify-center">
-                                        <iconify-icon icon="iconamoon:eye-light"></iconify-icon>
-                                    </a>
-                    
-                                    <a ata-tooltip-target="tooltip-Success" data-tooltip-placement="top" href="javascript:void(0)"
-                                        class="w-8 h-8 bg-success-100 dark:bg-success-600/25 tooltip text-success-600 dark:text-success-400 rounded-full inline-flex items-center justify-center">
-                                        <iconify-icon icon="lucide:edit"></iconify-icon>
-                                    </a>
-                                    <div id="tooltip-Success" role="tooltip"
-                                        class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip dark:bg-gray-800">
-                                        Tooltip Success
-                                        <div class="tooltip-arrow" data-popper-arrow></div>
-                                    </div>
-                    
-                                </div>
+                            <td class="text-center">
+                                {% comment %} Pay now / Treasurer log actions {% endcomment %}
+                                {% if inv.is_paid == 'PAID' %}
+                                <a href="{{ inv.get_absolute_url }}" class="bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                    aria-label="Pay contribution {{ inv.reference }}">
+                                    View receipt
+                                </a>
+                                {% else %}
+                                {% if request.user.role == 'TREASURER' or request.user.is_staff and request.user != inv.account %}
+                                <a href="{% url 'contributions:log-payment' inv.id %}" class="bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                    aria-label="Log payment for {{ inv.reference }}">
+                                    Log payment
+                                </a>
+                                {% elif request.user == inv.account and inv.is_paid == 'NOT PAID' %}
+                                <a href="{% url 'contributions:checkout' inv.id %}" class="bg-warning-100 dark:bg-warning-600/25 text-warning-600 dark:text-warning-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                    aria-label="Pay contribution {{ inv.reference }}">
+                                    Pay now
+                                </a>
+                                {% else %}
+                                <a href="{{ inv.get_absolute_url }}" class="bg-success-100 dark:bg-success-600/25 text-success-600 dark:text-success-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                    aria-label="Pay contribution {{ inv.reference }}">
+                                    View receipt
+                                </a>
+                                {% endif %}
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -296,179 +268,6 @@ Home
 
 
 {% block scripts %}
-    <!-- <script src="assets/js/homeTwoChart.js"></script> -->
-    <script>
-        // ================================ Balance Statistics Chart Start ================================ 
-        function createChartTwo(chartId, chartColor) {
-
-                var options = {
-                    series: [
-                        {
-                            name: 'Amount Collected',
-                            data: [2000, 1500, 1800, 2000, 1200, 1000, 2500, 2000, 2100, 1000, 1500, 2700],
-                        },
-                    ],
-                    chart: {
-                        type: 'area',
-                        width: '100%',
-                        height: 162,
-                        sparkline: {
-                            enabled: false // Remove whitespace
-                        },
-                        toolbar: {
-                            show: false
-                        },
-                        padding: {
-                            left: 0,
-                            right: 0,
-                            top: 0,
-                            bottom: 0
-                        }
-                    },
-                    dataLabels: {
-                        enabled: false
-                    },
-                    stroke: {
-                        curve: 'smooth',
-                        width: 2,
-                        colors: [chartColor],
-                        lineCap: 'round'
-                    },
-                    grid: {
-                        show: true,
-                        borderColor: 'red',
-                        strokeDashArray: 0,
-                        position: 'back',
-                        xaxis: {
-                            lines: {
-                                show: false
-                            }
-                        },
-                        yaxis: {
-                            lines: {
-                                show: false
-                            }
-                        },
-                        row: {
-                            colors: undefined,
-                            opacity: 0.5
-                        },
-                        column: {
-                            colors: undefined,
-                            opacity: 0.5
-                        },
-                        padding: {
-                            top: -30,
-                            right: 0,
-                            bottom: -10,
-                            left: 0
-                        },
-                    },
-                    fill: {
-                        type: 'gradient',
-                        colors: [chartColor], // Set the starting color (top color) here
-                        gradient: {
-                            shade: 'light', // Gradient shading type
-                            type: 'vertical',  // Gradient direction (vertical)
-                            shadeIntensity: 0.5, // Intensity of the gradient shading
-                            gradientToColors: [`${chartColor}00`], // Bottom gradient color (with transparency)
-                            inverseColors: false, // Do not invert colors
-                            opacityFrom: .6, // Starting opacity
-                            opacityTo: 0.3,  // Ending opacity
-                            stops: [0, 100],
-                        },
-                    },
-                    // Customize the circle marker color on hover
-                    markers: {
-                        colors: [chartColor],
-                        strokeWidth: 3,
-                        size: 0,
-                        hover: {
-                            size: 10
-                        }
-                    },
-                    xaxis: {
-                        labels: {
-                            show: false
-                        },
-                        categories: [`Jan`, `Feb`, `Mar`, `Apr`, `May`, `Jun`, `Jul`, `Aug`, `Sep`, `Oct`, `Nov`, `Dec`],
-                        tooltip: {
-                            enabled: false,
-                        },
-                        tooltip: {
-                            enabled: false
-                        },
-                        labels: {
-                            formatter: function (value) {
-                                return value;
-                            },
-                            style: {
-                                fontSize: "14px"
-                            }
-                        },
-                    },
-                    yaxis: {
-                        labels: {
-                            show: false
-                        },
-                    },
-                    tooltip: {
-                        x: {
-                            format: 'dd/MM/yy HH:mm'
-                        },
-                    },
-                };
-
-                var chart = new ApexCharts(document.querySelector(`#${chartId}`), options);
-                chart.render();
-            }
-            createChartTwo('revenue-chart', '#487fff');
-        // ================================ Balance Statistics Chart End ================================ 
-
-        // ================================ Expense Statistics Chart start ================================ 
-        var options = {
-            series: [30, 30, 30, 30],
-            chart: {
-                height: 240,
-                type: 'pie',
-            },
-            labels: ['Entertainment', 'Bill Expense', 'Others', 'Investment'],
-            colors: ['#02BCAF', '#F0437D', '#1C52F6', '#43DCFF'],
-            legend: {
-                show: true
-            },
-            responsive: [{
-                breakpoint: 480,
-                options: {
-                    chart: {
-                        width: 200
-                    },
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }]
-        };
-
-        var chart = new ApexCharts(document.querySelector("#expenseStatistics"), options);
-        chart.render();
-        // ================================ Expense Statistics Chart End ================================ 
-
-        // ================================ Expense Statistics Chart start ================================ 
-        R('.officer-slider').slick({
-            slidesToShow: 5,
-            slidesToScroll: 1,
-            arrows: false,
-            dots: false,
-            speed: 800,
-            centerPadding: '20px',
-            infinite: true,
-            autoplaySpeed: 2000,
-            centerMode: true,
-            autoplay: true,
-            rtl: R('html').attr('dir') === 'rtl' ? true : false,
-        });
-        // ================================ Expense Statistics Chart End ================================ 
-    </script>
+   
 {% endblock scripts %}
     

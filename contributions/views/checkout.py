@@ -211,6 +211,7 @@ def log_payment(request, id):
                     payment.reference = member_contribution.reference
                     payment.is_approved = Payment.LogPaymentStatus.PENDING  # Require approval
                     payment.save()
+                    payment.update_member_contribution_status(PaymentStatus.PENDING)
 
                     logger.info(
                         "Payment logged by treasurer %s for %s: R%.2f (%s)",

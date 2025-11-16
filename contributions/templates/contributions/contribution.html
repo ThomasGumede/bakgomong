@@ -29,6 +29,8 @@
             </div>
         </div>
     </div>
+    
+    {% if request.user.is_staff %}
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#ffefdd] dark:from-neutral-700 dark:to-neutral-800">
@@ -46,11 +48,37 @@
                     </div>
                 </div>
                 <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
-                    {{outstandings.count}} Members are behind with payments
+                    {{outstanding_count}} Members are behind with payments
                 </p>
             </div>
         </div>
     </div>
+    {% else %}
+    <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
+        <div
+            class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#ffefdd] dark:from-neutral-700 dark:to-neutral-800">
+            <div class="card-body p-0">
+                <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+                    <div class="flex items-center gap-2.5">
+                        <span
+                            class="mb-0 w-[48px] h-[48px] bg-warning-600 flex-shrink-0 text-white flex justify-center items-center rounded-full h6">
+                            <img src="{% static 'images/home-eleven/icons/home-eleven-icon2.svg' %}" alt="">
+                        </span>
+                        <div>
+                            <span class="font-medium text-neutral-600 text-base">Outstanding Balance</span>
+                            <h6 class="font-semibold mt-[2px]">R{{unpaid_amount}}</h6>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
+                    The Amount you have not paid
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if request.user.is_staff %}
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#e9e0ff] dark:from-neutral-700 dark:to-neutral-800">
@@ -59,8 +87,7 @@
                     <div class="flex items-center gap-2.5">
                         <span
                             class="mb-0 w-[48px] h-[48px] bg-lilac-600 flex-shrink-0 text-white flex justify-center items-center rounded-full h6">
-                            <iconify-icon icon="fluent:people-20-filled"
-                                class="text-white text-2xl mb-0"></iconify-icon>
+                            <iconify-icon icon="fluent:people-20-filled" class="text-white text-2xl mb-0"></iconify-icon>
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Make Payment</span>
@@ -74,6 +101,33 @@
             </div>
         </div>
     </div>
+    {% else %}
+    <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
+        <div
+            class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#f2fdff] to-[#ffefdd] dark:from-neutral-700 dark:to-neutral-800">
+            <div class="card-body p-0">
+                <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+                    <div class="flex items-center gap-2.5">
+                        <span
+                            class="mb-0 w-[48px] h-[48px] bg-warning-600 flex-shrink-0 text-white flex justify-center items-center rounded-full h6">
+                            <img src="{% static 'images/home-eleven/icons/home-eleven-icon2.svg' %}" alt="">
+                        </span>
+                        <div>
+                            <span class="font-medium text-neutral-600 text-base">Pending Balance</span>
+                            <h6 class="font-semibold mt-[2px]">R{{unpaid_amount}}</h6>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm mb-0 flex items-center flex-wrap gap-3 mt-3 text-neutral-600">
+                    The Amount you have not paid
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+        
+    
+    
     <div class="col-span-12 sm:col-span-6 2xl:col-span-3 col-xxl-3 col-sm-6">
         <div
             class="p-4 shadow-none rounded-lg h-full border border-white dark:border-neutral-600 bg-gradient-to-r from-[#deffec] to-[#f6fffa] dark:from-neutral-700 dark:to-neutral-800">
@@ -86,7 +140,7 @@
                         </span>
                         <div>
                             <span class="font-medium text-neutral-600 text-base">Total members</span>
-                            <h6 class="font-semibold mt-[2px]">200</h6>
+                            <h6 class="font-semibold mt-[2px]">{{contribution.member_contributions.count}}</h6>
                         </div>
                     </div>
                 </div>
@@ -116,8 +170,8 @@
                     <thead>
                         <tr>
                             <th scope="col">Members </th>
-                            <th scope="col" class="text-center">Email</th>
-                            <th scope="col" class="text-center">Transaction ID</th>
+                            
+                            <th scope="col" class="text-center">Inv No</th>
                             <th scope="col" class="text-center">Amount</th>
                             <th scope="col" class="text-center">Payment Method</th>
                             <th scope="col" class="text-center">Date</th>
@@ -132,14 +186,14 @@
                         <tr>
                             <td class="">
                                 <div class="flex items-center">
-                                    <img src="{% static 'images/users/user1.png' %}" alt=""
+                                    <img src="{% if payment.account.profile_image %}{{payment.account.profile_image.url}}{% else %}{% static 'dashboard/images/user-grid/user-grid-img13.png' %}{% endif %}" alt=""
                                         class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
                                     <div class="grow">
                                         <h6 class="text-base mb-0 font-medium">{{payment.account.get_full_name}}</h6>
                                     </div>
                                 </div>
                             </td>
-                            <td class="text-center">{{payment.account.email}}</td>
+                            
                             <td class="text-center">{{payment.reference}}</td>
                             <td class="text-center">R{{payment.amount}}</td>
                             <td class="text-center">{{payment.payment_method}}</td>
@@ -149,8 +203,11 @@
                                     class="bg-success-focus text-success-main dark:text-success-500 px-6 py-1 rounded-[50rem] font-medium text-sm">Paid</a>
                             </td>
                             <td class="text-center">
-                                <span
-                                    class="bg-success-focus text-success-main dark:text-success-500 px-6 py-1 rounded-[50rem] font-medium text-sm">View Invoice</span>
+                                <a href="{{ payment.member_contribution.get_absolute_url }}"
+                                    class="bg-success-focus dark:bg-success-500 text-success-main dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                    aria-label="Pay contribution {{ payment.reference }}">
+                                    View receipt
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -170,7 +227,7 @@
     <div class="card-header">
         <div class="flex items-center flex-wrap gap-2 justify-between">
             <h6 class="font-bold text-lg mb-0">Out standing payments</h6>
-            <a href="javascript:void(0)"
+            <a href=""
                 class="text-primary-600 dark:text-primary-600 hover-text-primary flex items-center gap-1">
                 View All
                 <iconify-icon icon="solar:alt-arrow-right-linear" class="icon"></iconify-icon>
@@ -199,7 +256,7 @@
                             <tr>
                                 <td class="">
                                     <div class="flex items-center">
-                                        <img src="{% static 'images/users/user1.png' %}" alt=""
+                                        <img src="{% if outstanding.account.profile_image %}{{outstanding.account.profile_image.url}}{% else %}{% static 'dashboard/images/user-grid/user-grid-img13.png' %}{% endif %}" alt=""
                                             class="w-10 h-10 rounded-full flex-shrink-0 me-3 overflow-hidden">
                                         <div class="grow">
                                             <h6 class="text-base mb-0 font-medium">{{outstanding.account.get_full_name}}</h6>
@@ -216,8 +273,30 @@
                                         class="bg-danger-100 dark:bg-danger-600/25 text-danger-600 dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm">Unpaid</span>
                                 </td>
                                 <td class="text-center">
-                                    <a href="{% url 'contributions:checkout' outstanding.id %}"
-                                        class="bg-success-focus dark:bg-success-500 text-success-main dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm">Paynow</a>
+                                    {% comment %} Pay now / Treasurer log actions {% endcomment %}
+                                    {% if outstanding.is_paid == 'PAID' %}
+                                    <a href="{{ outstanding.get_absolute_url }}" class="bg-success-focus dark:bg-success-500 text-success-main dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                        aria-label="Pay contribution {{ outstanding.reference }}">
+                                        View receipt
+                                    </a>
+                                    {% else %}
+                                        {% if request.user.role == 'TREASURER' or request.user.is_staff and request.user != inv.account %}
+                                        <a href="{% url 'contributions:log-payment' outstanding.id %}" class="bg-success-focus dark:bg-success-500 text-success-main dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                            aria-label="Log payment for {{ outstanding.reference }}">
+                                            Log payment
+                                        </a>
+                                        {% elif request.user == outstanding.account and outstanding.is_paid == 'NOT PAID' %}
+                                        <a href="{% url 'contributions:checkout' outstanding.id %}" class="bg-success-focus dark:bg-success-500 text-success-main dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                            aria-label="Pay contribution {{ outstanding.reference }}">
+                                            Pay now
+                                        </a>
+                                        {% else %}
+                                        <a href="{{ outstanding.get_absolute_url }}" class="bg-success-focus dark:bg-success-500 text-success-main dark:text-danger-400 px-6 py-1.5 rounded-full font-medium text-sm"
+                                            aria-label="Pay contribution {{ outstanding.reference }}">
+                                            View receipt
+                                        </a>
+                                        {% endif %}
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}

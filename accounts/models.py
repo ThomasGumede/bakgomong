@@ -114,6 +114,9 @@ class Account(AbstractUser, AbstractProfile):
         full = self.get_full_name() or ""
         return full.strip() or self.username
     
+    def get_absolute_url():
+        pass
+    
     @property
     def total_unpaid(self):
         from contributions.models import MemberContribution

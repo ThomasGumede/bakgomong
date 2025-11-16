@@ -13,7 +13,7 @@ urlpatterns = [
     
     path('member-invoices/', member_contributions_list, name='member-contributions-list'),
     path('member-invoices/family=<family_slug>', member_contributions_list, name='member-contributions-list-by-slug'),
-    path('my-invoices/@<username>', my_member_contributions_list, name='my-contributions'),
+    path('my-invoices/', my_member_contributions_list, name='my-contributions'),
     path('member-invoice/<uuid:id>', member_contribution, name='member-contribution'),
     path('member-invoices/add/', add_member_contribution, name='add-member-contribution'),
     path('member-invoices/<uuid:id>/edit/', update_member_contribution, name='update-member-contribution'),

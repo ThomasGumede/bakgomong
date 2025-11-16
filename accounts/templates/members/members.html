@@ -63,16 +63,7 @@
                             
 
                             
-                            <th scope="col" class="text-neutral-800 dark:text-white">
-                                <div class="flex items-center gap-2">
-                                    Out-standing Balance
-                                    <svg class="w-4 h-4 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                                        width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-                                            stroke-width="2" d="m8 15 4 4 4-4m0-6-4-4-4 4" />
-                                    </svg>
-                                </div>
-                            </th>
+                            
                             
 
                             <th scope="col" class="text-neutral-800 dark:text-white">
@@ -89,16 +80,16 @@
                             
                             
                             <td>
-                                <div class="flex items-center">
+                                <a href="{% url 'accounts:user-details' member.username %}" class="flex items-center">
                                     <img src="{% if member.profile_image %}{{member.profile_image.url}}{% else %}{% static 'images/user.png' %}{% endif %}"
                                         alt="{{member.get_full_name}}"
                                         class="shrink-0 me-3 h-[46px] w-[46px] rounded-lg">
                                     <h6 class="text-base mb-0 font-medium grow">{{member.get_full_name}}</h6>
-                                </div>
+                                </a>
                             </td>
                             <td>{{member.email}}</td>
                             <td>{{member.role}}</td>
-                            <td>R{{member.total_unpaid}}</td>
+                            
                             
 
                             <td class="text-center">
